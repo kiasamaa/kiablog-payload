@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 
-import type { Media, Page, Post, Config } from '../payload-types'
+import type { Config, Media, Post } from '../payload-types'
 
-import { mergeOpenGraph } from './mergeOpenGraph'
 import { getServerSideURL } from './getURL'
+import { mergeOpenGraph } from './mergeOpenGraph'
+
+const SITE_NAME = 'Kira Blog'
 
 const getImageURL = (image?: Media | Config['db']['defaultIDType'] | null) => {
   const serverUrl = getServerSideURL()
@@ -19,21 +21,17 @@ const getImageURL = (image?: Media | Config['db']['defaultIDType'] | null) => {
   return url
 }
 
-export const generateMeta = async (args: {
-  doc: Partial<Page> | Partial<Post> | null
-}): Promise<Metadata> => {
+export const generateMeta = async (args: { doc: Partial<Post> | null }): Promise<Metadata> => {
   const { doc } = args
 
   const ogImage = getImageURL(doc?.meta?.image)
-
-  const title = doc?.meta?.title
-    ? doc?.meta?.title + ' | Payload Website Template'
-    : 'Payload Website Template'
+  const title = doc?.meta?.title || doc?.title || SITE_NAME
+  const description = doc?.meta?.description || doc?.description || undefined
 
   return {
-    description: doc?.meta?.description,
+    description,
     openGraph: mergeOpenGraph({
-      description: doc?.meta?.description || '',
+      description: description || '',
       images: ogImage
         ? [
             {
@@ -41,8 +39,8 @@ export const generateMeta = async (args: {
             },
           ]
         : undefined,
-      title,
-      url: Array.isArray(doc?.slug) ? doc?.slug.join('/') : '/',
+      title: title === SITE_NAME ? SITE_NAME : `${title} | ${SITE_NAME}`,
+      url: doc?.slug ? `/posts/${doc.slug}` : '/',
     }),
     title,
   }

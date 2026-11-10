@@ -1,303 +1,268 @@
-# Payload Website Template
+<div align="center">
 
-This is the official [Payload Website Template](https://github.com/payloadcms/payload/blob/3.x/templates/website). Use it to power websites, blogs, or portfolios from small to enterprise. This repo includes a fully-working backend, enterprise-grade admin panel, and a beautifully designed, production-ready website.
+# Kia Blog
 
-This template is right for you if you are working on:
+**基于 Payload CMS 3 + Next.js 16 的个人博客底座**
 
-- A personal or enterprise-grade website, blog, or portfolio
-- A content publishing platform with a fully featured publication workflow
-- Exploring the capabilities of Payload
+毛玻璃视觉、Markdown 写作、后台可视化管理的一家之言之地。
 
-Core features:
+![Next.js](https://img.shields.io/badge/Next.js-16-000000)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+![Payload](https://img.shields.io/badge/Payload-3-2D2D2D)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)
+![SQLite](https://img.shields.io/badge/SQLite-3-003B57)
+![License](https://img.shields.io/badge/License-MIT-22C55E)
 
-- [Pre-configured Payload Config](#how-it-works)
-- [Authentication](#users-authentication)
-- [Access Control](#access-control)
-- [Layout Builder](#layout-builder)
-- [Draft Preview](#draft-preview)
-- [Live Preview](#live-preview)
-- [On-demand Revalidation](#on-demand-revalidation)
-- [SEO](#seo)
-- [Search](#search)
-- [Redirects](#redirects)
-- [Jobs and Scheduled Publishing](#jobs-and-scheduled-publish)
-- [Website](#website)
+[简介](#简介) · [效果展示](#效果展示) · [功能特性](#功能特性) · [快速开始](#快速开始) · [项目结构](#项目结构) · [部署](#部署)
 
-## Quick Start
+</div>
 
-To spin up this example locally, follow these steps:
+---
 
-### Clone
+## 简介
 
-If you have not done so already, you need to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+Kia Blog 是一个开箱即用的个人博客模板：前台是深色优先的「星光玻璃」风格站点，后台是 Payload 提供的可视化内容管理面板，两者运行在同一个 Next.js 应用里，无需单独部署后端。
 
-Use the `create-payload-app` CLI to clone this template directly to your machine:
+项目基于 `create-payload-app` 的 website 模板重新搭建前台，去掉了页面构建器，保留并重建了真正需要的那部分：
+
+- **写作为中心** — 文章正文使用 Markdown，编辑器里粘贴源码即可，不用学富文本区块
+- **内容可维护** — 文章、分类、相册、照片、站点信息全部在 `/admin` 里增删改
+- **视觉统一** — 毛玻璃卡片、大圆角、柔和渐变、深浅色切换，动效克制不喧宾夺主
+- **结构清晰** — 服务端取数 + 客户端交互分层，集合/全局/路由各归其位，便于继续扩展
+
+## 效果展示
+
+> **待补充**：截图建议放在 `docs/images/` 下，命名如 `home.png`、`posts.png`、`post-detail.png`、`photowall.png`、`admin.png`。
+
+| 页面 | 截图 |
+|:-----|:-----|
+| 首页 | `docs/images/home.png`（待补充） |
+| 文章列表 | `docs/images/posts.png`（待补充） |
+| 文章详情 | `docs/images/post-detail.png`（待补充） |
+| 照片墙 | `docs/images/photowall.png`（待补充） |
+| 管理后台 | `docs/images/admin.png`（待补充） |
+
+## 功能特性
+
+### 博客前台
+
+| 模块 | 路径 | 说明 |
+|:-----|:-----|:-----|
+| 首页 | `/` | 站点介绍与文章、照片墙入口 |
+| 文章列表 | `/posts` | 分类胶囊筛选、卡片光斑悬停、分批加载更多、空状态 |
+| 文章详情 | `/posts/[slug]` | Markdown 渲染、代码高亮与复制、图片灯箱、阅读进度、相关文章 |
+| 照片墙 | `/photowall` | 相册卡片、网格内展开、全屏灯箱（←/→ 切换、Esc 关闭、缩略图条） |
+| 关于 | `/about` | 站点简介与预留正文区 |
+| 主题 | — | 深色优先，手动切换并记忆到 `localStorage`，首屏无闪烁 |
+| 响应式 | — | 桌面 / 平板 / 手机三档，移动端抽屉导航 |
+
+### 管理后台
+
+| 集合 / 全局 | 用途 |
+|:------------|:-----|
+| `posts` | 文章：Markdown 正文、封面、分类、标签、置顶、浏览量、自动字数与阅读时长、草稿与定时发布 |
+| `categories` | 文章分类，带排序 |
+| `albums` | 相册：标题、简介、封面、排序 |
+| `photos` | 照片：所属相册、图片、说明、方向、排序 |
+| `media` | 上传媒体，自动生成 7 种尺寸，支持目录与焦点裁剪 |
+| `users` | 后台账号（仅管理用途，前台无登录） |
+| `site-settings` | 站点名称、简介、作者、头像、背景图、主题色、社交链接、备案信息 |
+
+### 工程能力
+
+- **草稿预览**：`/next/preview` 校验密钥 + 登录态后开启 `draftMode`，配合 Payload Live Preview 实时刷新
+- **按需重验证**：文章、相册、站点设置保存后通过 `revalidatePath` / `revalidateTag` 精确失效缓存
+- **SEO**：Payload SEO 插件管理 `meta` 字段，`generateMeta` 输出 Open Graph；`/posts-sitemap.xml` 动态生成
+- **类型安全**：`pnpm generate:types` 从配置生成 `payload-types.ts`，前台直接消费
+- **测试**：Vitest 集成测试 + Playwright 端到端测试
+
+## 技术栈
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**框架与 CMS**
+
+- Next.js 16（App Router / Turbopack）
+- React 19
+- Payload CMS 3
+- TypeScript 5
+- SQLite（`@payloadcms/db-sqlite`）
+
+</td>
+<td width="50%" valign="top">
+
+**样式与交互**
+
+- Tailwind CSS 4
+- shadcn/ui
+- Framer Motion
+- lucide-react
+- marked + marked-highlight + highlight.js
+
+</td>
+</tr>
+</table>
+
+## 快速开始
+
+### 环境要求
+
+- Node.js `^22.23.4` 或 `>=24.22.1`
+- pnpm `^9` / `^10` / `^11`
+
+### 本地运行
 
 ```bash
-pnpx create-payload-app my-project -t website
+# 1. 安装依赖
+pnpm install
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env，至少修改 PAYLOAD_SECRET
+
+# 3. 启动开发服务器
+pnpm dev
 ```
 
-### Development
+打开 `http://localhost:3000` 查看前台，`http://localhost:3000/admin` 创建第一个管理员账号。
 
-1. First [clone the repo](#clone) if you have not done so already
-1. `cd my-project && cp .env.example .env` to copy the example environment variables
-1. `pnpm install && pnpm dev` to install dependencies and start the dev server
-1. open `http://localhost:3000` to open the app in your browser
-
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
-
-## How it works
-
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
-
-### Collections
-
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
-
-- #### Users (Authentication)
-
-  Users are auth-enabled collections that have access to the admin panel and unpublished content. See [Access Control](#access-control) for more details.
-
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Posts
-
-  Posts are used to generate blog posts, news articles, or any other type of content that is published over time. All posts are layout builder enabled so you can generate unique layouts for each post using layout-building blocks, see [Layout Builder](#layout-builder) for more details. Posts are also draft-enabled so you can preview them before publishing them to your website, see [Draft Preview](#draft-preview) for more details.
-
-- #### Pages
-
-  All pages are layout builder enabled so you can generate unique layouts for each page using layout-building blocks, see [Layout Builder](#layout-builder) for more details. Pages are also draft-enabled so you can preview them before publishing them to your website, see [Draft Preview](#draft-preview) for more details.
-
-- #### Media
-
-  This is the uploads enabled collection used by pages, posts, and projects to contain media like images, videos, downloads, and other assets. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-- #### Categories
-
-  A taxonomy used to group posts together. Categories can be nested inside of one another, for example "News > Technology". See the official [Payload Nested Docs Plugin](https://payloadcms.com/docs/plugins/nested-docs) for more details.
-
-### Globals
-
-See the [Globals](https://payloadcms.com/docs/configuration/globals) docs for details on how to extend this functionality.
-
-- `Header`
-
-  The data required by the header on your front-end like nav links.
-
-- `Footer`
-
-  Same as above but for the footer of your site.
-
-## Access control
-
-Basic access control is setup to limit access to various content based based on publishing status.
-
-- `users`: Users can access the admin panel and create or edit content.
-- `posts`: Everyone can access published posts, but only users can create, update, or delete them.
-- `pages`: Everyone can access published pages, but only users can create, update, or delete them.
-
-For more details on how to extend this functionality, see the [Payload Access Control](https://payloadcms.com/docs/access-control/overview#access-control) docs.
-
-## Layout Builder
-
-Create unique page layouts for any type of content using a powerful layout builder. This template comes pre-configured with the following layout building blocks:
-
-- Hero
-- Content
-- Media
-- Call To Action
-- Archive
-
-Each block is fully designed and built into the front-end website that comes with this template. See [Website](#website) for more details.
-
-## Lexical editor
-
-A deep editorial experience that allows complete freedom to focus just on writing content without breaking out of the flow with support for Payload blocks, media, links and other features provided out of the box. See [Lexical](https://payloadcms.com/docs/rich-text/overview) docs.
-
-## Draft Preview
-
-All posts and pages are draft-enabled so you can preview them before publishing them to your website. To do this, these collections use [Versions](https://payloadcms.com/docs/configuration/collections#versions) with `drafts` set to `true`. This means that when you create a new post, project, or page, it will be saved as a draft and will not be visible on your website until you publish it. This also means that you can preview your draft before publishing it to your website. To do this, we automatically format a custom URL which redirects to your front-end to securely fetch the draft version of your content.
-
-Since the front-end of this template is statically generated, this also means that pages, posts, and projects will need to be regenerated as changes are made to published documents. To do this, we use an `afterChange` hook to regenerate the front-end when a document has changed and its `_status` is `published`.
-
-For more details on how to extend this functionality, see the official [Draft Preview Example](https://github.com/payloadcms/payload/tree/3.x/examples/draft-preview).
-
-## Live preview
-
-In addition to draft previews you can also enable live preview to view your end resulting page as you're editing content with full support for SSR rendering. See [Live preview docs](https://payloadcms.com/docs/live-preview/overview) for more details.
-
-## On-demand Revalidation
-
-We've added hooks to collections and globals so that all of your pages, posts, footer, or header changes will automatically be updated in the frontend via on-demand revalidation supported by Nextjs.
-
-> Note: if an image has been changed, for example it's been cropped, you will need to republish the page it's used on in order to be able to revalidate the Nextjs image cache.
-
-## SEO
-
-This template comes pre-configured with the official [Payload SEO Plugin](https://payloadcms.com/docs/plugins/seo) for complete SEO control from the admin panel. All SEO data is fully integrated into the front-end website that comes with this template. See [Website](#website) for more details.
-
-## Search
-
-This template also pre-configured with the official [Payload Search Plugin](https://payloadcms.com/docs/plugins/search) to showcase how SSR search features can easily be implemented into Next.js with Payload. See [Website](#website) for more details.
-
-## Redirects
-
-If you are migrating an existing site or moving content to a new URL, you can use the `redirects` collection to create a proper redirect from old URLs to new ones. This will ensure that proper request status codes are returned to search engines and that your users are not left with a broken link. This template comes pre-configured with the official [Payload Redirects Plugin](https://payloadcms.com/docs/plugins/redirects) for complete redirect control from the admin panel. All redirects are fully integrated into the front-end website that comes with this template. See [Website](#website) for more details.
-
-## Jobs and Scheduled Publish
-
-We have configured [Scheduled Publish](https://payloadcms.com/docs/versions/drafts#scheduled-publish) which uses the [jobs queue](https://payloadcms.com/docs/jobs-queue/jobs) in order to publish or unpublish your content on a scheduled time. The tasks are run on a cron schedule and can also be run as a separate instance if needed.
-
-> Note: When deployed on Vercel, depending on the plan tier, you may be limited to daily cron only.
-
-## Website
-
-This template includes a beautifully designed, production-ready front-end built with the [Next.js App Router](https://nextjs.org), served right alongside your Payload app in a instance. This makes it so that you can deploy both your backend and website where you need it.
-
-Core features:
-
-- [Next.js App Router](https://nextjs.org)
-- [TypeScript](https://www.typescriptlang.org)
-- [React Hook Form](https://react-hook-form.com)
-- [Payload Admin Bar](https://github.com/payloadcms/payload/tree/3.x/packages/admin-bar)
-- [TailwindCSS styling](https://tailwindcss.com/)
-- [shadcn/ui components](https://ui.shadcn.com/)
-- User Accounts and Authentication
-- Fully featured blog
-- Publication workflow
-- Dark mode
-- Pre-made layout building blocks
-- SEO
-- Search
-- Redirects
-- Live preview
-
-### Cache
-
-Although Next.js includes a robust set of caching strategies out of the box, Payload Cloud proxies and caches all files through Cloudflare using the [Official Cloud Plugin](https://www.npmjs.com/package/@payloadcms/payload-cloud). This means that Next.js caching is not needed and is disabled by default. If you are hosting your app outside of Payload Cloud, you can easily reenable the Next.js caching mechanisms by removing the `no-store` directive from all fetch requests in `./src/app/_api` and then removing all instances of `export const dynamic = 'force-dynamic'` from pages files, such as `./src/app/(pages)/[slug]/page.tsx`. For more details, see the official [Next.js Caching Docs](https://nextjs.org/docs/app/building-your-application/caching).
-
-## Development
-
-To spin up this example locally, follow the [Quick Start](#quick-start). Then [Seed](#seed) the database with a few pages, posts, and projects.
-
-### Working with Postgres
-
-Postgres and other SQL-based databases follow a strict schema for managing your data. In comparison to our MongoDB adapter, this means that there's a few extra steps to working with Postgres.
-
-Note that often times when making big schema changes you can run the risk of losing data if you're not manually migrating it.
-
-#### Local development
-
-Ideally we recommend running a local copy of your database so that schema updates are as fast as possible. By default the Postgres adapter has `push: true` for development environments. This will let you add, modify and remove fields and collections without needing to run any data migrations.
-
-If your database is pointed to production you will want to set `push: false` otherwise you will risk losing data or having your migrations out of sync.
-
-#### Migrations
-
-[Migrations](https://payloadcms.com/docs/database/migrations) are essentially SQL code versions that keeps track of your schema. When deploy with Postgres you will need to make sure you create and then run your migrations.
-
-Locally create a migration
+### 填充演示数据
 
 ```bash
-pnpm payload migrate:create
+pnpm seed
 ```
 
-This creates the migration files you will need to push alongside with your new configuration.
+脚本会写入 3 个分类、3 篇示例文章与 1 个相册（不包含照片，照片需自行上传）。**该命令会清空现有的文章、分类、相册与照片**，仅在初始化时使用。
 
-On the server after building and before running `pnpm start` you will want to run your migrations
+### 常用命令
+
+| 命令 | 说明 |
+|:-----|:-----|
+| `pnpm dev` | 启动开发服务器 |
+| `pnpm build` | 生产构建（含 sitemap 生成） |
+| `pnpm start` | 以生产模式启动 |
+| `pnpm seed` | 填充演示数据 |
+| `pnpm generate:types` | 修改集合字段后重新生成类型 |
+| `pnpm generate:importmap` | 修改后台自定义组件后重新生成 importMap |
+| `pnpm test:int` | 运行 Vitest 集成测试 |
+| `pnpm test:e2e` | 运行 Playwright 端到端测试 |
+
+### 环境变量
+
+| 变量 | 必填 | 说明 |
+|:-----|:-----|:-----|
+| `DATABASE_URL` | 是 | SQLite 文件地址，默认 `file:./kiasite.db` |
+| `PAYLOAD_SECRET` | 是 | JWT 签名密钥，建议 `openssl rand -hex 32` |
+| `NEXT_PUBLIC_SERVER_URL` | 是 | 站点公开地址，用于 CORS、绝对链接与 SEO |
+| `PREVIEW_SECRET` | 否 | 草稿预览校验密钥 |
+| `CRON_SECRET` | 否 | 定时任务访问密钥 |
+
+## 项目结构
+
+```txt
+.
+├── src/
+│   ├── access/                 # 访问控制：anyone / authenticated / authenticatedOrPublished
+│   ├── app/
+│   │   ├── (frontend)/         # 前台路由：首页、文章、照片墙、关于、404
+│   │   │   ├── layout.tsx      # 字体、主题脚本、导航、页脚、背景
+│   │   │   ├── globals.css     # Tailwind 4 主题与毛玻璃工具类
+│   │   │   ├── posts/          # 列表（Server）+ 交互（PostsClient）
+│   │   │   └── photowall/      # 相册聚合（Server）+ 展开与灯箱（Client）
+│   │   └── (payload)/          # 后台与 REST/GraphQL（Payload 生成，勿手改）
+│   ├── collections/            # Posts / Categories / Albums / Photos / Media / Users
+│   ├── globals/                # SiteSettings 站点设置
+│   ├── components/
+│   │   ├── layout/             # Navbar / Footer / SiteBackground
+│   │   ├── posts/              # PostCard / MarkdownContent
+│   │   ├── providers/          # ThemeProvider
+│   │   └── ui/                 # Lightbox / ReadingProgress / shadcn 基础组件
+│   ├── endpoints/seed/         # 演示数据
+│   ├── plugins/                # SEO / Redirects 插件配置
+│   ├── utilities/              # markdown / formatDate / getMediaUrl / generateMeta 等
+│   ├── payload.config.ts       # Payload 总配置
+│   └── payload-types.ts        # 生成的文件，勿手改
+├── public/                     # 静态资源与上传目录 public/media
+├── scripts/seed.ts             # pnpm seed 入口
+├── tests/                      # Vitest 与 Playwright 测试
+└── next.config.ts              # withPayload 包装与图片域名配置
+```
+
+## 内容维护
+
+1. **写文章**：后台「内容 → 文章」→ 填写标题、摘要、Markdown 正文 → 选择分类、填标签 → 发布
+2. **建相册**：后台「照片墙 → 相册」创建相册并上传封面
+3. **传照片**：后台「照片墙 → 照片」选择所属相册并上传图片，可设置方向与排序
+4. **调站点**：后台「站点 → 站点设置」修改站点名、简介、背景图、社交链接与备案
+
+> 文章正文支持标准 Markdown 与围栏代码块；「摘要」会显示在列表卡片并作为默认 SEO 描述。
+
+## 部署
+
+### 自托管
 
 ```bash
-pnpm payload migrate
+pnpm build
+pnpm start
 ```
 
-This command will check for any migrations that have not yet been run and try to run them and it will keep a record of migrations that have been run in the database.
+注意两点：
+
+- `.env` 中的 `DATABASE_URL` 与实际运行的数据库文件保持一致
+- `public/media/` 是上传目录，部署时需要持久化，否则重启会丢失图片
 
 ### Docker
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
+```bash
+cp .env.example .env
+docker compose up
+```
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
+### 数据库变更
 
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
+本地开发时 Payload 会自动把 schema 同步到 SQLite。若已有数据且改动较大，建议先备份 `kiasite.db` 再启动；生产环境请使用 Payload 的 migration 流程（`pnpm payload migrate:create` / `pnpm payload migrate`）。
 
-### Seed
+## 开发约定
 
-To seed the database with a few pages, posts, and projects you can click the 'seed database' link from the admin panel.
+- **改集合字段** → 执行 `pnpm generate:types`，否则类型不匹配
+- **改后台自定义组件** → 执行 `pnpm generate:importmap`，否则后台会报组件解析失败
+- **新增页面** → 放在 `src/app/(frontend)/` 下，默认沿用 `layout.tsx` 的导航与背景
+- **新增集合** → `src/collections/` 下建目录 → 注册到 `payload.config.ts` → 补访问控制
+- **前台取数** → 在 Server Component 里用 `getPayload()` + Local API，客户端组件只接收序列化后的 props
 
-The seed script will also create a demo user for demonstration purposes only:
+## 路线图
 
-- Demo Author
-  - Email: `demo-author@payloadcms.com`
-  - Password: `password`
+- [x] 顶部导航与深浅色主题
+- [x] 文章列表与分类筛选
+- [x] Markdown 文章详情、代码高亮、图片灯箱、阅读进度
+- [x] 照片墙与全屏灯箱
+- [x] 后台内容管理与按需重验证
+- [ ] 归档时间线
+- [ ] 分类 / 标签独立页面
+- [ ] 站内搜索
+- [ ] RSS 订阅
+- [ ] 评论系统
+- [ ] 音乐播放器
 
-> NOTICE: seeding the database is destructive because it drops your current database to populate a fresh one from the seed template. Only run this command if you are starting a new project or can afford to lose your current data.
+## 贡献
 
-## Production
-
-To run Payload in production, you need to build and start the Admin panel. To do so, follow these steps:
-
-1. Invoke the `next build` script by running `pnpm build` or `npm run build` in your project root. This creates a `.next` directory with a production-ready admin bundle.
-1. Finally run `pnpm start` or `npm run start` to run Node in production and serve Payload from the `.build` directory.
-1. When you're ready to go live, see Deployment below for more details.
-
-### Deploying to Vercel
-
-This template can also be deployed to Vercel for free. You can get started by choosing the Vercel DB adapter during the setup of the template or by manually installing and configuring it:
+欢迎提 Issue 与 Pull Request。提交前请确保：
 
 ```bash
-pnpm add @payloadcms/db-vercel-postgres
+pnpm build
+pnpm test:int
 ```
 
-```ts
-// payload.config.ts
-import { vercelPostgresAdapter } from '@payloadcms/db-vercel-postgres'
+## License
 
-export default buildConfig({
-  // ...
-  db: vercelPostgresAdapter({
-    pool: {
-      connectionString: process.env.POSTGRES_URL || '',
-    },
-  }),
-  // ...
-```
+[MIT](./LICENSE)
 
-We also support Vercel's blob storage:
+## 致谢
 
-```bash
-pnpm add @payloadcms/storage-vercel-blob
-```
-
-```ts
-// payload.config.ts
-import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
-
-export default buildConfig({
-  // ...
-  plugins: [
-    vercelBlobStorage({
-      collections: {
-        [Media.slug]: true,
-      },
-      token: process.env.BLOB_READ_WRITE_TOKEN || '',
-    }),
-  ],
-  // ...
-```
-
-There is also a simplified [one click deploy](https://github.com/payloadcms/payload/tree/3.x/templates/with-vercel-postgres) to Vercel should you need it.
-
-### Self-hosting
-
-Before deploying your app, you need to:
-
-1. Ensure your app builds and serves in production. See [Production](#production) for more details.
-2. You can then deploy Payload as you would any other Node.js or Next.js application either directly on a VPS, DigitalOcean's Apps Platform, via Coolify or more. More guides coming soon.
-
-You can also deploy your app manually, check out the [deployment documentation](https://payloadcms.com/docs/production/deployment) for full details.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+- [Payload CMS](https://payloadcms.com) — 内容管理内核与 website 模板
+- [Next.js](https://nextjs.org) — 应用框架
+- [shadcn/ui](https://ui.shadcn.com) — 基础组件
+- [Kirameku](https://github.com/Xinghongia/Kirameku) — 前台视觉与交互的参考来源之一

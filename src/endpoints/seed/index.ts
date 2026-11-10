@@ -1,33 +1,79 @@
-import type { CollectionSlug, GlobalSlug, Payload, PayloadRequest, File } from 'payload'
+import type { Payload, PayloadRequest } from 'payload'
 
-import { contactForm as contactFormData } from './contact-form'
-import { contact as contactPageData } from './contact-page'
-import { home } from './home'
-import { image1 } from './image-1'
-import { image2 } from './image-2'
-import { imageHero1 } from './image-hero-1'
-import { post1 } from './post-1'
-import { post2 } from './post-2'
-import { post3 } from './post-3'
-
-const collections: CollectionSlug[] = [
-  'categories',
-  'media',
-  'pages',
-  'posts',
-  'forms',
-  'form-submissions',
-  'search',
+const categories = [
+  { slug: 'tech', title: '技术', description: '开发、工具与工程实践', sort: 1 },
+  { slug: 'life', title: '生活', description: '日常记录与随想', sort: 2 },
+  { slug: 'reading', title: '阅读', description: '读书笔记与摘录', sort: 3 },
 ]
 
-const globals: GlobalSlug[] = ['header', 'footer']
+const posts = [
+  {
+    title: '从这里开始',
+    slug: 'getting-started',
+    description: '介绍这个博客底座的结构与内容维护方式。',
+    categorySlug: 'tech',
+    tags: [{ tag: '入门' }, { tag: 'Payload' }],
+    markdown: `这是一个基于 **Payload CMS + Next.js** 的博客底座。
 
-const categories = ['Technology', 'News', 'Finance', 'Design', 'Software', 'Engineering']
+## 内容维护
 
-// Next.js revalidation errors are normal when seeding the database without a server running
-// i.e. running `yarn seed` locally instead of using the admin UI within an active app
-// The app is not running to revalidate the pages and so the API routes are not available
-// These error messages can be ignored: `Error hitting revalidate route for...`
+- 文章：\`/admin\` → 内容 → 文章，正文使用 Markdown 编写
+- 相册：\`/admin\` → 照片墙 → 相册 / 照片
+- 站点信息：\`/admin\` → 站点 → 站点设置
+
+## 代码示例
+
+\`\`\`ts
+export const hello = (name: string) => \`Hello, \${name}!\`
+\`\`\`
+
+> 保持简单，先让站点跑起来，再逐步添加能力。
+`,
+  },
+  {
+    title: 'Markdown 写作约定',
+    slug: 'markdown-guide',
+    description: '标题、列表、代码块与图片在本文中的书写方式。',
+    categorySlug: 'tech',
+    tags: [{ tag: 'Markdown' }],
+    markdown: `## 标题层级
+
+正文建议从 \`##\` 开始，\`#\` 留给文章标题。
+
+## 列表
+
+1. 有序列表
+2. 第二项
+
+- 无序列表
+- 第二项
+
+## 代码块
+
+\`\`\`bash
+pnpm dev
+\`\`\`
+
+## 图片
+
+图片可以直接使用 Markdown 语法引用媒体地址，前台支持点击放大。
+`,
+  },
+  {
+    title: '一个安静的周末',
+    slug: 'a-quiet-weekend',
+    description: '关于散步、咖啡和一点点生活节奏的记录。',
+    categorySlug: 'life',
+    tags: [{ tag: '随笔' }],
+    markdown: `清晨的风有一点凉，路边的树影落在地面上，被行人踩得零碎。
+
+午后读了几页书，做了一杯咖啡，把窗子开了一条缝。
+
+**慢下来** 的时候，才注意到很多平时忽略的细节。
+`,
+  },
+]
+
 export const seed = async ({
   payload,
   req,
@@ -37,262 +83,85 @@ export const seed = async ({
 }): Promise<void> => {
   payload.logger.info('Seeding database...')
 
-  // we need to clear the media directory before seeding
-  // as well as the collections and globals
-  // this is because while `yarn seed` drops the database
-  // the custom `/api/seed` endpoint does not
-  payload.logger.info(`— Clearing collections and globals...`)
-
-  // clear the database
-  await Promise.all(
-    globals.map((global) =>
-      payload.updateGlobal({
-        slug: global,
-        data: {
-          navItems: [],
-        },
-        depth: 0,
-        context: {
-          disableRevalidate: true,
-        },
-      }),
-    ),
-  )
-
-  await Promise.all(
-    collections.map((collection) => payload.db.deleteMany({ collection, req, where: {} })),
-  )
-
-  await Promise.all(
-    collections
-      .filter((collection) => Boolean(payload.collections[collection].config.versions))
-      .map((collection) => payload.db.deleteVersions({ collection, req, where: {} })),
-  )
-
-  payload.logger.info(`— Seeding demo author and user...`)
-
   await payload.delete({
-    collection: 'users',
-    depth: 0,
-    where: {
-      email: {
-        equals: 'demo-author@example.com',
-      },
-    },
+    collection: 'photos',
+    context: { disableRevalidate: true },
+    overrideAccess: true,
+    req,
+    where: {},
   })
 
-  payload.logger.info(`— Seeding media...`)
+  await payload.delete({
+    collection: 'albums',
+    context: { disableRevalidate: true },
+    overrideAccess: true,
+    req,
+    where: {},
+  })
 
-  const [image1Buffer, image2Buffer, image3Buffer, hero1Buffer] = await Promise.all([
-    fetchFileByURL(
-      'https://raw.githubusercontent.com/payloadcms/payload/refs/heads/3.x/templates/website/src/endpoints/seed/image-post1.webp',
-    ),
-    fetchFileByURL(
-      'https://raw.githubusercontent.com/payloadcms/payload/refs/heads/3.x/templates/website/src/endpoints/seed/image-post2.webp',
-    ),
-    fetchFileByURL(
-      'https://raw.githubusercontent.com/payloadcms/payload/refs/heads/3.x/templates/website/src/endpoints/seed/image-post3.webp',
-    ),
-    fetchFileByURL(
-      'https://raw.githubusercontent.com/payloadcms/payload/refs/heads/3.x/templates/website/src/endpoints/seed/image-hero1.webp',
-    ),
-  ])
+  await payload.delete({
+    collection: 'posts',
+    context: { disableRevalidate: true },
+    overrideAccess: true,
+    req,
+    where: {},
+  })
 
-  const [demoAuthor, image1Doc, image2Doc, image3Doc, imageHomeDoc] = await Promise.all([
-    payload.create({
-      collection: 'users',
-      data: {
-        name: 'Demo Author',
-        email: 'demo-author@example.com',
-        password: 'password',
-      },
-    }),
-    payload.create({
-      collection: 'media',
-      data: image1,
-      file: image1Buffer,
-    }),
-    payload.create({
-      collection: 'media',
-      data: image2,
-      file: image2Buffer,
-    }),
-    payload.create({
-      collection: 'media',
-      data: image2,
-      file: image3Buffer,
-    }),
-    payload.create({
-      collection: 'media',
-      data: imageHero1,
-      file: hero1Buffer,
-    }),
+  await payload.delete({
+    collection: 'categories',
+    context: { disableRevalidate: true },
+    overrideAccess: true,
+    req,
+    where: {},
+  })
+
+  const categoryDocs = await Promise.all(
     categories.map((category) =>
       payload.create({
         collection: 'categories',
-        data: {
-          title: category,
-          slug: category,
-        },
+        data: category,
+        context: { disableRevalidate: true },
+        overrideAccess: true,
+        req,
       }),
     ),
-  ])
+  )
 
-  payload.logger.info(`— Seeding posts...`)
+  const categoryIDBySlug = new Map(categoryDocs.map((doc) => [doc.slug, doc.id]))
 
-  // Do not create posts with `Promise.all` because we want the posts to be created in order
-  // This way we can sort them by `createdAt` or `publishedAt` and they will be in the expected order
-  const post1Doc = await payload.create({
-    collection: 'posts',
-    depth: 0,
-    context: {
-      disableRevalidate: true,
-    },
-    data: post1({ heroImage: image1Doc, blockImage: image2Doc, author: demoAuthor }),
-  })
+  await Promise.all(
+    posts.map((post) =>
+      payload.create({
+        collection: 'posts',
+        data: {
+          _status: 'published',
+          category: categoryIDBySlug.get(post.categorySlug),
+          description: post.description,
+          markdown: post.markdown,
+          publishedAt: new Date().toISOString(),
+          slug: post.slug,
+          tags: post.tags,
+          title: post.title,
+        },
+        context: { disableRevalidate: true },
+        overrideAccess: true,
+        req,
+      }),
+    ),
+  )
 
-  const post2Doc = await payload.create({
-    collection: 'posts',
-    depth: 0,
-    context: {
-      disableRevalidate: true,
-    },
-    data: post2({ heroImage: image2Doc, blockImage: image3Doc, author: demoAuthor }),
-  })
-
-  const post3Doc = await payload.create({
-    collection: 'posts',
-    depth: 0,
-    context: {
-      disableRevalidate: true,
-    },
-    data: post3({ heroImage: image3Doc, blockImage: image1Doc, author: demoAuthor }),
-  })
-
-  // update each post with related posts
-  await payload.update({
-    id: post1Doc.id,
-    collection: 'posts',
+  await payload.create({
+    collection: 'albums',
     data: {
-      relatedPosts: [post2Doc.id, post3Doc.id],
+      description: '旅行与日常的光影片段',
+      slug: 'daily',
+      sort: 1,
+      title: '日常片段',
     },
-  })
-  await payload.update({
-    id: post2Doc.id,
-    collection: 'posts',
-    data: {
-      relatedPosts: [post1Doc.id, post3Doc.id],
-    },
-  })
-  await payload.update({
-    id: post3Doc.id,
-    collection: 'posts',
-    data: {
-      relatedPosts: [post1Doc.id, post2Doc.id],
-    },
+    context: { disableRevalidate: true },
+    overrideAccess: true,
+    req,
   })
 
-  payload.logger.info(`— Seeding contact form...`)
-
-  const contactForm = await payload.create({
-    collection: 'forms',
-    depth: 0,
-    data: contactFormData,
-  })
-
-  payload.logger.info(`— Seeding pages...`)
-
-  const [_, contactPage] = await Promise.all([
-    payload.create({
-      collection: 'pages',
-      depth: 0,
-      data: home({ heroImage: imageHomeDoc, metaImage: image2Doc }),
-    }),
-    payload.create({
-      collection: 'pages',
-      depth: 0,
-      data: contactPageData({ contactForm: contactForm }),
-    }),
-  ])
-
-  payload.logger.info(`— Seeding globals...`)
-
-  await Promise.all([
-    payload.updateGlobal({
-      slug: 'header',
-      data: {
-        navItems: [
-          {
-            link: {
-              type: 'custom',
-              label: 'Posts',
-              url: '/posts',
-            },
-          },
-          {
-            link: {
-              type: 'reference',
-              label: 'Contact',
-              reference: {
-                relationTo: 'pages',
-                value: contactPage.id,
-              },
-            },
-          },
-        ],
-      },
-    }),
-    payload.updateGlobal({
-      slug: 'footer',
-      data: {
-        navItems: [
-          {
-            link: {
-              type: 'custom',
-              label: 'Admin',
-              url: '/admin',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Source Code',
-              newTab: true,
-              url: 'https://github.com/payloadcms/payload/tree/3.x/templates/website',
-            },
-          },
-          {
-            link: {
-              type: 'custom',
-              label: 'Payload',
-              newTab: true,
-              url: 'https://payloadcms.com/',
-            },
-          },
-        ],
-      },
-    }),
-  ])
-
-  payload.logger.info('Seeded database successfully!')
-}
-
-async function fetchFileByURL(url: string): Promise<File> {
-  const res = await fetch(url, {
-    credentials: 'include',
-    method: 'GET',
-  })
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch file from ${url}, status: ${res.status}`)
-  }
-
-  const data = await res.arrayBuffer()
-
-  return {
-    name: url.split('/').pop() || `file-${Date.now()}`,
-    data: Buffer.from(data),
-    mimetype: `image/${url.split('.').pop()}`,
-    size: data.byteLength,
-  }
+  payload.logger.info('Seed completed.')
 }
