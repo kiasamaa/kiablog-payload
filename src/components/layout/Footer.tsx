@@ -10,8 +10,9 @@ export const Footer: React.FC<{
   siteTitle: string
   footerText?: string | null
   icp?: string | null
+  policeIcp?: string | null
   socialLinks?: FooterLink[] | null
-}> = ({ siteTitle, footerText, icp, socialLinks }) => {
+}> = ({ siteTitle, footerText, icp, policeIcp, socialLinks }) => {
   const year = new Date().getFullYear()
 
   return (
@@ -39,7 +40,33 @@ export const Footer: React.FC<{
           {footerText ? ` · ${footerText}` : ''}
         </p>
 
-        {icp ? <p>{icp}</p> : null}
+        {icp || policeIcp ? (
+          <p className="flex flex-wrap items-center justify-center gap-x-2">
+            {icp ? (
+              <a
+                className="transition-colors hover:text-indigo-500 hover:underline dark:hover:text-sky-300"
+                href="https://beian.miit.gov.cn/"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {icp}
+              </a>
+            ) : null}
+
+            {icp && policeIcp ? <span aria-hidden>·</span> : null}
+
+            {policeIcp ? (
+              <a
+                className="transition-colors hover:text-indigo-500 hover:underline dark:hover:text-sky-300"
+                href="https://beian.mps.gov.cn/#/query/webSearch"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {policeIcp}
+              </a>
+            ) : null}
+          </p>
+        ) : null}
       </div>
     </footer>
   )

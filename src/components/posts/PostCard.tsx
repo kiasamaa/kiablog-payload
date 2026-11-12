@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { Clock, Eye, Pin } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -83,7 +83,7 @@ export const PostCard: React.FC<Props> = ({ post, index }) => {
                   src={post.coverUrl}
                 />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/60 via-sky-500/40 to-purple-500/60" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/60 via-sky-500/40 to-cyan-400/60" />
               )}
 
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
@@ -111,12 +111,12 @@ export const PostCard: React.FC<Props> = ({ post, index }) => {
                 </h3>
 
                 {post.description ? (
-                  <p className="mb-3 line-clamp-2 text-xs text-white/70 md:text-sm">
+                  <p className="mb-3 line-clamp-2 text-[13px] leading-relaxed text-white/70 md:text-sm">
                     {post.description}
                   </p>
                 ) : null}
 
-                <div className="flex items-center justify-between text-[11px] text-white/60">
+                <div className="flex items-center justify-between text-[12px] text-white/65">
                   <div className="flex items-center gap-3">
                     {post.publishedAtLabel ? <span>{post.publishedAtLabel}</span> : null}
                     <span className="flex items-center gap-1">

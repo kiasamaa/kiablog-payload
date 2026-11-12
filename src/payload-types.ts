@@ -105,9 +105,11 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     'site-settings': SiteSetting;
+    about: About;
   };
   globalsSelect: {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    about: AboutSelect<false> | AboutSelect<true>;
   };
   locale: null;
   widgets: {
@@ -152,8 +154,19 @@ export interface Post {
    * 使用 Markdown 编写正文，支持代码块、图片与表格
    */
   markdown: string;
+  /**
+   * 外链封面地址，填写后优先于上传封面显示
+   */
+  coverUrl?: string | null;
+  /**
+   * 本地上传的封面，仅在未填写外链封面时使用
+   */
   cover?: (number | null) | Media;
   category?: (number | null) | Category;
+  /**
+   * 所属系列，用于后续的系列文章聚合
+   */
+  series?: string | null;
   tags?:
     | {
         tag: string;
@@ -516,8 +529,10 @@ export interface PostsSelect<T extends boolean = true> {
   title?: T;
   description?: T;
   markdown?: T;
+  coverUrl?: T;
   cover?: T;
   category?: T;
+  series?: T;
   tags?:
     | T
     | {
@@ -786,6 +801,10 @@ export interface SiteSetting {
   bio?: string | null;
   avatar?: (number | null) | Media;
   /**
+   * 建站日期，用于计算运行天数与站点概览
+   */
+  siteStartedAt?: string | null;
+  /**
    * 站点背景图，随机展示
    */
   backgroundImages?:
@@ -809,9 +828,64 @@ export interface SiteSetting {
     | null;
   footerText?: string | null;
   /**
-   * 备案号，展示在页脚
+   * ICP 备案号，展示在页脚并链接到工信部备案查询
    */
   icp?: string | null;
+  /**
+   * 公安备案号，展示在页脚并链接到公安备案查询
+   */
+  policeIcp?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about".
+ */
+export interface About {
+  id: number;
+  /**
+   * 关于页的自我介绍，换行即分段
+   */
+  intro?: string | null;
+  /**
+   * 座右铭，展示在简介右侧的小卡片里
+   */
+  motto?: string | null;
+  /**
+   * 如：湖南省，长沙市
+   */
+  locationPlace?: string | null;
+  /**
+   * 位置卡片背景图，如 /images/location.png
+   */
+  locationImageUrl?: string | null;
+  /**
+   * 我的装备，按时间倒序展示
+   */
+  gears?:
+    | {
+        date?: string | null;
+        model?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * 爱好卡片，每张卡可以放多组内容
+   */
+  hobbies?:
+    | {
+        label: string;
+        slides?:
+          | {
+              title?: string | null;
+              text?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -825,6 +899,7 @@ export interface SiteSettingsSelect<T extends boolean = true> {
   authorName?: T;
   bio?: T;
   avatar?: T;
+  siteStartedAt?: T;
   backgroundImages?:
     | T
     | {
@@ -846,6 +921,40 @@ export interface SiteSettingsSelect<T extends boolean = true> {
       };
   footerText?: T;
   icp?: T;
+  policeIcp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "about_select".
+ */
+export interface AboutSelect<T extends boolean = true> {
+  intro?: T;
+  motto?: T;
+  locationPlace?: T;
+  locationImageUrl?: T;
+  gears?:
+    | T
+    | {
+        date?: T;
+        model?: T;
+        id?: T;
+      };
+  hobbies?:
+    | T
+    | {
+        label?: T;
+        slides?:
+          | T
+          | {
+              title?: T;
+              text?: T;
+              id?: T;
+            };
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

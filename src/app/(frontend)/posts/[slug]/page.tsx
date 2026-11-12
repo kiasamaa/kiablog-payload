@@ -1,5 +1,5 @@
 import configPromise from '@payload-config'
-import { ArrowLeft, Calendar, Clock, Eye, FolderOpen } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Eye } from 'lucide-react'
 import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
 import Image from 'next/image'
@@ -7,15 +7,21 @@ import Link from 'next/link'
 import { getPayload } from 'payload'
 import React, { cache } from 'react'
 
+import { Aside } from '@/components/layout/aside/Aside'
 import { LivePreviewListener } from '@/components/LivePreviewListener'
 import { MarkdownContent } from '@/components/posts/MarkdownContent'
+import { SetReadingTitle } from '@/components/posts/SetReadingTitle'
+import { ViewTracker } from '@/components/posts/ViewTracker'
 import { PayloadRedirects } from '@/components/PayloadRedirects'
-import { ReadingProgress } from '@/components/ui/ReadingProgress'
 import type { Post } from '@/payload-types'
 import { formatDate } from '@/utilities/formatDate'
 import { generateMeta } from '@/utilities/generateMeta'
+import { getRecentPosts, getSeriesPosts } from '@/utilities/getAsideData'
+import { getCachedGlobal } from '@/utilities/getGlobals'
 import { getMediaUrl } from '@/utilities/getMediaUrl'
+import { getSiteStats } from '@/utilities/getSiteStats'
 import { renderMarkdown } from '@/utilities/markdown'
+import { cn } from '@/utilities/ui'
 
 type Args = {
   params: Promise<{
@@ -54,84 +60,117 @@ export default async function PostPage({ params: paramsPromise }: Args) {
   }
 
   const cover = post.cover && typeof post.cover === 'object' ? post.cover : null
-  const coverUrl = cover ? getMediaUrl(cover.sizes?.xlarge?.url || cover.url) : null
+  const coverUrl =
+    post.coverUrl || (cover ? getMediaUrl(cover.sizes?.xlarge?.url || cover.url) : null)
   const category = post.category && typeof post.category === 'object' ? post.category : null
   const tags = post.tags?.map((tag) => tag.tag).filter(Boolean) ?? []
   const html = renderMarkdown(post.markdown)
-  const related = await queryRelatedPosts(post)
+  const [related, series, recent, stats, settings] = await Promise.all([
+    queryRelatedPosts(post),
+    getSeriesPosts(post.series),
+    getRecentPosts(4),
+    getSiteStats(),
+    getCachedGlobal('site-settings', 1)(),
+  ])
 
   return (
     <article className="pb-20">
-      <ReadingProgress />
+      <SetReadingTitle title={post.title} />
+      <ViewTracker slug={post.slug} />
       {draft ? <LivePreviewListener /> : null}
 
-      <div className="mx-auto max-w-6xl px-4 pt-10 sm:px-6 lg:px-8">
-        <Link
-          className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-indigo-500 dark:text-slate-400 dark:hover:text-sky-300"
-          href="/posts"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          返回文章列表
-        </Link>
+      <div className="mx-auto grid max-w-7xl gap-x-8 gap-y-6 px-4 pt-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="xl:col-span-2">
+          <Link
+            className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-indigo-500 dark:text-slate-400 dark:hover:text-sky-300"
+            href="/posts"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            返回文章列表
+          </Link>
+        </div>
 
-        <header className="mt-6">
-          <h1 className="max-w-4xl font-serif text-3xl leading-tight font-bold text-slate-800 md:text-4xl dark:text-slate-50">
-            {post.title}
-          </h1>
+        <div className="min-w-0">
+          {/* 整篇文章：一张玻璃卡片，封面与正文同处其中 */}
+          <div className="overflow-hidden rounded-[28px] border border-white/60 bg-white/82 shadow-2xl shadow-blue-900/10 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/78">
+          {/* 封面与标题叠层 */}
+          <div
+            className={cn(
+              'relative flex flex-col justify-end overflow-hidden',
+              coverUrl ? 'h-72 md:h-[22rem]' : 'min-h-[17rem]',
+            )}
+          >
+            {coverUrl ? (
+              <Image
+                alt={post.title}
+                className="object-cover"
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 896px"
+                src={coverUrl}
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-sky-500/70 to-cyan-400" />
+            )}
 
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <span className="glass-button flex items-center gap-1.5 px-3 py-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              {formatDate(post.publishedAt)}
-            </span>
+            {/* 暗色遮罩，保证白色标题清晰 */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/5" />
 
-            {category ? (
-              <span className="glass-button flex items-center gap-1.5 px-3 py-1.5">
-                <FolderOpen className="h-3.5 w-3.5" />
-                {category.title}
-              </span>
-            ) : null}
+            <div className="relative z-10 p-6 md:p-10">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-white/80">
+                {category ? (
+                  <Link
+                    className="rounded-full bg-white/20 px-2.5 py-1 backdrop-blur-sm transition-colors hover:bg-white/30"
+                    href={`/categories/${category.slug}`}
+                  >
+                    {category.title}
+                  </Link>
+                ) : null}
 
-            <span className="glass-button flex items-center gap-1.5 px-3 py-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              {post.readingTime || 1} 分钟阅读
-            </span>
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {formatDate(post.publishedAt)}
+                </span>
+              </div>
 
-            <span className="glass-button flex items-center gap-1.5 px-3 py-1.5">
-              <Eye className="h-3.5 w-3.5" />
-              {post.views ?? 0} 次浏览
-            </span>
+              <h1 className="mt-3 font-serif text-[26px] leading-[1.2] font-bold text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)] md:text-[34px]">
+                {post.title}
+              </h1>
 
-            {tags.map((tag) => (
-              <span
-                className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-indigo-600 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300"
-                key={tag}
-              >
-                #{tag}
-              </span>
-            ))}
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/75">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  {post.readingTime || 1} 分钟阅读
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Eye className="h-3.5 w-3.5" />
+                  {post.views ?? 0} 次浏览
+                </span>
+              </div>
+
+              {tags.length > 0 ? (
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  {tags.map((tag) => (
+                    <span
+                      className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[11px] text-white/85 backdrop-blur-sm"
+                      key={tag}
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
-        </header>
 
-        {coverUrl ? (
-          <div className="relative mt-8 aspect-[16/9] w-full overflow-hidden rounded-3xl shadow-xl shadow-slate-900/10">
-            <Image
-              alt={post.title}
-              className="object-cover"
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 1152px"
-              src={coverUrl}
-            />
+          {/* 正文 */}
+          <div className="px-5 py-7 md:px-10 md:py-9">
+            <MarkdownContent html={html} />
           </div>
-        ) : null}
-
-        <div className="mx-auto mt-10 max-w-[48rem]">
-          <MarkdownContent html={html} />
         </div>
 
         {related.length > 0 ? (
-          <section className="mx-auto mt-16 max-w-[48rem]">
+          <section className="mt-12">
             <h2 className="font-serif text-xl font-bold text-slate-800 dark:text-slate-100">
               相关文章
             </h2>
@@ -139,9 +178,10 @@ export default async function PostPage({ params: paramsPromise }: Args) {
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               {related.map((item) => {
                 const itemCover =
-                  item.cover && typeof item.cover === 'object'
+                  item.coverUrl ||
+                  (item.cover && typeof item.cover === 'object'
                     ? getMediaUrl(item.cover.sizes?.small?.url || item.cover.url)
-                    : null
+                    : null)
 
                 return (
                   <Link
@@ -177,6 +217,16 @@ export default async function PostPage({ params: paramsPromise }: Args) {
             </div>
           </section>
         ) : null}
+        </div>
+
+        <Aside
+          currentSlug={post.slug}
+          recent={recent}
+          series={series}
+          settings={settings}
+          stats={stats}
+          variant="post-detail"
+        />
       </div>
     </article>
   )

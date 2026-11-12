@@ -64,14 +64,32 @@ export const Posts: CollectionConfig<'posts'> = {
       },
     },
     {
+      name: 'coverUrl',
+      type: 'text',
+      admin: {
+        description: '外链封面地址，填写后优先于上传封面显示',
+      },
+    },
+    {
       name: 'cover',
       type: 'upload',
       relationTo: 'media',
+      admin: {
+        description: '本地上传的封面，仅在未填写外链封面时使用',
+      },
     },
     {
       name: 'category',
       type: 'relationship',
       relationTo: 'categories',
+    },
+    {
+      name: 'series',
+      type: 'text',
+      admin: {
+        description: '所属系列，用于后续的系列文章聚合',
+        position: 'sidebar',
+      },
     },
     {
       name: 'tags',

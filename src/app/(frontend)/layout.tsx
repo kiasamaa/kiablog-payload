@@ -1,38 +1,24 @@
+import { GeistMono } from 'geist/font/mono'
+import { GeistSans } from 'geist/font/sans'
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Noto_Serif_SC } from 'next/font/google'
 import React from 'react'
 
+import { ContextMenu } from '@/components/layout/ContextMenu'
 import { Footer } from '@/components/layout/Footer'
-import { Navbar } from '@/components/layout/Navbar'
+import { Navbar } from '@/components/layout/nav/Navbar'
 import { SiteBackground } from '@/components/layout/SiteBackground'
+import { ReadingProvider } from '@/components/providers/ReadingProvider'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { getCachedGlobal } from '@/utilities/getGlobals'
 import { getMediaUrl } from '@/utilities/getMediaUrl'
+import { getNavData } from '@/utilities/getNavData'
 import { getServerSideURL } from '@/utilities/getURL'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
 import { cn } from '@/utilities/ui'
 
 import './globals.css'
 import 'highlight.js/styles/vs2015.css'
-
-const geistSans = Geist({
-  display: 'swap',
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-})
-
-const geistMono = Geist_Mono({
-  display: 'swap',
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-})
-
-const notoSerifSC = Noto_Serif_SC({
-  display: 'swap',
-  subsets: ['latin'],
-  variable: '--font-noto-serif-sc',
-  weight: ['400', '700'],
-})
+import 'katex/dist/katex.min.css'
 
 const themeScript = `(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.add(t==='light'?'light':'dark');}catch(e){document.documentElement.classList.add('dark');}})();`
 
@@ -60,7 +46,8 @@ export const generateMetadata = async (): Promise<Metadata> => {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const settings = await getCachedGlobal('site-settings', 1)()
+  const [settings, nav] = await Promise.all([getCachedGlobal('site-settings', 1)(), getNavData()])
+
   const siteTitle = settings?.siteTitle || 'Kira Blog'
   const backgroundImage = settings?.backgroundImages?.[0]?.image
   const backgroundUrl =
@@ -68,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html
-      className={cn(geistSans.variable, geistMono.variable, notoSerifSC.variable)}
+      className={cn(GeistSans.variable, GeistMono.variable)}
       lang="zh-CN"
       suppressHydrationWarning
     >
@@ -79,15 +66,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <ThemeProvider>
-          <SiteBackground imageUrl={backgroundUrl} />
-          <Navbar siteTitle={siteTitle} />
-          <main className="flex-1 pt-16">{children}</main>
-          <Footer
-            footerText={settings?.footerText}
-            icp={settings?.icp}
-            siteTitle={siteTitle}
-            socialLinks={settings?.socialLinks}
-          />
+          <ReadingProvider>
+            <SiteBackground imageUrl={backgroundUrl} />
+            <Navbar
+              categories={nav.categories}
+              settings={settings}
+              siteTitle={siteTitle}
+              totalPosts={nav.total}
+            />
+            <ContextMenu />
+            <main className="flex-1 pt-14">{children}</main>
+            <Footer
+              footerText={settings?.footerText}
+              icp={settings?.icp}
+              policeIcp={settings?.policeIcp}
+              siteTitle={siteTitle}
+              socialLinks={settings?.socialLinks}
+            />
+          </ReadingProvider>
         </ThemeProvider>
       </body>
     </html>

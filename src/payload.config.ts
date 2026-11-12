@@ -11,6 +11,7 @@ import { Photos } from './collections/Photos'
 import { Posts } from './collections/Posts'
 import { Users } from './collections/Users'
 import { defaultLexical } from '@/fields/defaultLexical'
+import { About } from './globals/About/config'
 import { SiteSettings } from './globals/SiteSettings/config'
 import { plugins } from './plugins'
 import { getServerSideURL } from './utilities/getURL'
@@ -59,7 +60,7 @@ export default buildConfig({
   }),
   collections: [Posts, Categories, Albums, Photos, Media, Users],
   cors: [getServerSideURL()].filter(Boolean),
-  globals: [SiteSettings],
+  globals: [SiteSettings, About],
   plugins,
   secret: process.env.PAYLOAD_SECRET,
   sharp,

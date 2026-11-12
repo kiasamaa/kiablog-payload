@@ -64,3 +64,4 @@ Thumbs.db
 
 # ===== AI / IDE 本地数据 =====
 .codebuddy/
+.agents/

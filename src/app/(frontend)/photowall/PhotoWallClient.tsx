@@ -1,6 +1,6 @@
 'use client'
 
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'motion/react'
 import { Camera, ImageIcon, X } from 'lucide-react'
 import Image from 'next/image'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -111,7 +111,7 @@ export const PhotoWallClient: React.FC<Props> = ({ albums }) => {
                         src={album.coverUrl}
                       />
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/50 via-sky-400/30 to-purple-500/50" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/50 via-sky-400/30 to-cyan-400/50" />
                     )}
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />

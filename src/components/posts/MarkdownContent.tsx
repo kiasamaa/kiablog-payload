@@ -58,6 +58,57 @@ export const MarkdownContent: React.FC<Props> = ({ html, className }) => {
     return () => cleanups.forEach((cleanup) => cleanup())
   }, [html])
 
+  useEffect(() => {
+    const root = containerRef.current
+
+    if (!root) return
+
+    const targets = Array.from(root.querySelectorAll<HTMLElement>('pre > code.language-mermaid'))
+
+    if (targets.length === 0) return
+
+    let cancelled = false
+
+    const renderDiagrams = async () => {
+      const { default: mermaid } = await import('mermaid')
+      const isDark = document.documentElement.classList.contains('dark')
+
+      mermaid.initialize({
+        fontFamily: 'inherit',
+        securityLevel: 'loose',
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'default',
+      })
+
+      for (const [index, code] of targets.entries()) {
+        const source = code.textContent || ''
+        const pre = code.parentElement
+
+        if (!pre) continue
+
+        await mermaid
+          .render(`mermaid-${Date.now()}-${index}`, source)
+          .then(({ svg }) => {
+            if (cancelled) return
+
+            const wrapper = document.createElement('div')
+            wrapper.className = 'mermaid-diagram'
+            wrapper.innerHTML = svg
+            pre.replaceWith(wrapper)
+          })
+          .catch((error) => {
+            console.error('Mermaid 渲染失败', error)
+          })
+      }
+    }
+
+    void renderDiagrams()
+
+    return () => {
+      cancelled = true
+    }
+  }, [html])
+
   const handleClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement
 

@@ -43,9 +43,27 @@
   --breakpoint-lg: 64rem;
   --breakpoint-xl: 80rem;
   --breakpoint-2xl: 86rem;
+
+  /* ===== 雾蓝主题 =====
+     把 indigo 映射到蓝（blue 阶），sky 保持 Tailwind 原生天蓝，
+     这样原有的 indigo→sky 渐变会变成「蓝 → 天蓝」，层次自然且干净，
+     不用逐处改类名。 */
+  --color-indigo-50: #eff6ff;
+  --color-indigo-100: #dbeafe;
+  --color-indigo-200: #bfdbfe;
+  --color-indigo-300: #93c5fd;
+  --color-indigo-400: #60a5fa;
+  --color-indigo-500: #3b82f6;
+  --color-indigo-600: #2563eb;
+  --color-indigo-700: #1d4ed8;
+  --color-indigo-800: #1e40af;
+  --color-indigo-900: #1e3a8a;
+  --color-indigo-950: #172554;
   --font-mono: var(--font-geist-mono);
   --font-sans: var(--font-geist-sans);
-  --font-serif: var(--font-noto-serif-sc);
+  /* 站内不再使用宋体：font-serif 统一落到黑体，避免逐处改类名 */
+  --font-serif: var(--font-geist-sans), system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
 }
 
 @layer utilities {
@@ -264,61 +282,70 @@ pre {
 /* ========== 毛玻璃 ========== */
 
 @layer components {
+  /* 更通透的玻璃：白 30% + 16px 模糊，阴影带一点青调 */
   .glass-card {
-    background: rgba(255, 255, 255, 0.4);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.3);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    backdrop-filter: blur(16px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 10px 40px rgba(37, 99, 235, 0.07);
     border-radius: 16px;
   }
 
   .dark .glass-card {
-    background: rgba(30, 41, 59, 0.5);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    background: rgba(16, 30, 42, 0.52);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   }
 
   .glass-button {
-    background: rgba(255, 255, 255, 0.3);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.26);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.38);
     border-radius: 12px;
     transition:
       background-color 0.3s ease,
+      border-color 0.3s ease,
       transform 0.3s ease,
       box-shadow 0.3s ease;
   }
 
   .glass-button:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.44);
+    border-color: rgba(59, 130, 246, 0.32);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
   }
 
   .dark .glass-button {
-    background: rgba(51, 65, 85, 0.5);
+    background: rgba(30, 41, 59, 0.42);
     border-color: rgba(255, 255, 255, 0.1);
   }
 
   .dark .glass-button:hover {
-    background: rgba(71, 85, 105, 0.6);
+    background: rgba(45, 60, 78, 0.55);
+    border-color: rgba(45, 212, 191, 0.28);
   }
 
   .glass-input {
-    background: rgba(255, 255, 255, 0.3);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.28);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 12px;
     padding: 0.75rem 1rem;
     outline: none;
     transition: all 0.3s ease;
   }
 
+  .glass-input:focus {
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  }
+
   .dark .glass-input {
-    background: rgba(51, 65, 85, 0.5);
+    background: rgba(30, 41, 59, 0.42);
     border-color: rgba(255, 255, 255, 0.1);
   }
 }
@@ -349,6 +376,40 @@ pre {
 .prose img {
   border-radius: 12px;
   margin-inline: auto;
+}
+
+/* Mermaid 图表 */
+.mermaid-diagram {
+  display: flex;
+  justify-content: center;
+  margin: 1.75rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark .mermaid-diagram {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* KaTeX 行内公式与正文行高对齐 */
+.prose .katex {
+  font-size: 1.05em;
+}
+
+.prose .katex-display {
+  margin: 1.75rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
 }
 
 /* 代码复制按钮 */

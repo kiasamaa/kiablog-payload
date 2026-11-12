@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
       {
         pathname: '/api/media/file/**',
       },
+      {
+        pathname: '/images/**',
+      },
     ],
     qualities: [100],
     remotePatterns: [
@@ -33,6 +36,11 @@ const nextConfig: NextConfig = {
           protocol: url.protocol.replace(':', '') as 'http' | 'https',
         }
       }),
+      // 文章外链封面与正文插图所在的图床
+      {
+        hostname: 'img.kianexus.com',
+        protocol: 'https' as const,
+      },
     ],
   },
   webpack: (webpackConfig) => {

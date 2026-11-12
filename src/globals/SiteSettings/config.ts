@@ -49,6 +49,17 @@ export const SiteSettings: GlobalConfig = {
               type: 'upload',
               relationTo: 'media',
             },
+            {
+              name: 'siteStartedAt',
+              type: 'date',
+              defaultValue: '2025-02-28',
+              admin: {
+                description: '建站日期，用于计算运行天数与站点概览',
+                date: {
+                  pickerAppearance: 'dayOnly',
+                },
+              },
+            },
           ],
         },
         {
@@ -113,7 +124,14 @@ export const SiteSettings: GlobalConfig = {
               name: 'icp',
               type: 'text',
               admin: {
-                description: '备案号，展示在页脚',
+                description: 'ICP 备案号，展示在页脚并链接到工信部备案查询',
+              },
+            },
+            {
+              name: 'policeIcp',
+              type: 'text',
+              admin: {
+                description: '公安备案号，展示在页脚并链接到公安备案查询',
               },
             },
           ],
