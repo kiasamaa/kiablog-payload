@@ -155,7 +155,7 @@ export interface Post {
    */
   markdown: string;
   /**
-   * 外链封面地址，填写后优先于上传封面显示
+   * 填写图片地址后优先于上传封面显示
    */
   coverUrl?: string | null;
   /**
@@ -164,7 +164,7 @@ export interface Post {
   cover?: (number | null) | Media;
   category?: (number | null) | Category;
   /**
-   * 所属系列，用于后续的系列文章聚合
+   * 同系列文章会在侧边栏聚合展示
    */
   series?: string | null;
   tags?:
@@ -177,7 +177,7 @@ export interface Post {
   views?: number | null;
   wordCount?: number | null;
   /**
-   * 预计阅读时长（分钟），随正文自动计算
+   * 随正文自动计算，无需手动填写
    */
   readingTime?: number | null;
   publishedAt?: string | null;
@@ -204,7 +204,22 @@ export interface Post {
  */
 export interface Media {
   id: number;
+  /**
+   * 图片无法显示时展示的文字，也用于无障碍阅读
+   */
   alt?: string | null;
+  /**
+   * 没有本地图片时，填图床原图地址（如七牛 img.kianexus.com），保存时会自动下载到媒体库
+   */
+  sourceUrl?: string | null;
+  /**
+   * 选填，壁纸/插图的作者署名
+   */
+  author?: string | null;
+  /**
+   * 选填，原图出处（页面链接或站点名）
+   */
+  source?: string | null;
   caption?: {
     root: {
       type: string;
@@ -346,7 +361,7 @@ export interface Album {
   title: string;
   description?: string | null;
   /**
-   * 相册封面，建议使用 3:2 横图
+   * 建议使用 3:2 横图；列表里会和相册名一起显示缩略图
    */
   cover?: (number | null) | Media;
   /**
@@ -603,6 +618,9 @@ export interface PhotosSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  sourceUrl?: T;
+  author?: T;
+  source?: T;
   caption?: T;
   folder?: T;
   updatedAt?: T;
@@ -796,16 +814,16 @@ export interface SiteSetting {
   siteDescription?: string | null;
   authorName?: string | null;
   /**
-   * 一句话简介，展示在首页与关于页
+   * 展示在首页欢迎卡、关于页与侧边栏
    */
   bio?: string | null;
   avatar?: (number | null) | Media;
   /**
-   * 建站日期，用于计算运行天数与站点概览
+   * 用于计算运行天数与站点概览
    */
   siteStartedAt?: string | null;
   /**
-   * 站点背景图，随机展示
+   * 站点背景图，每次访问随机展示一张
    */
   backgroundImages?:
     | {
@@ -815,6 +833,9 @@ export interface SiteSetting {
     | null;
   themeColors?:
     | {
+        /**
+         * 十六进制颜色，如 #2563eb
+         */
         color: string;
         id?: string | null;
       }[]
@@ -826,13 +847,16 @@ export interface SiteSetting {
         id?: string | null;
       }[]
     | null;
+  /**
+   * 展示在页脚版权行的补充说明
+   */
   footerText?: string | null;
   /**
-   * ICP 备案号，展示在页脚并链接到工信部备案查询
+   * 展示在页脚并链接到工信部备案查询
    */
   icp?: string | null;
   /**
-   * 公安备案号，展示在页脚并链接到公安备案查询
+   * 展示在页脚并链接到公安备案查询
    */
   policeIcp?: string | null;
   updatedAt?: string | null;
@@ -849,7 +873,7 @@ export interface About {
    */
   intro?: string | null;
   /**
-   * 座右铭，展示在简介右侧的小卡片里
+   * 展示在简介右侧的小卡片里
    */
   motto?: string | null;
   /**
@@ -861,7 +885,7 @@ export interface About {
    */
   locationImageUrl?: string | null;
   /**
-   * 我的装备，按时间倒序展示
+   * 按时间倒序展示
    */
   gears?:
     | {
@@ -871,7 +895,7 @@ export interface About {
       }[]
     | null;
   /**
-   * 爱好卡片，每张卡可以放多组内容
+   * 每张卡可以放多组内容
    */
   hobbies?:
     | {

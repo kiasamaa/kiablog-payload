@@ -4,6 +4,10 @@ import { authenticated } from '../../access/authenticated'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: '用户',
+    plural: '用户',
+  },
   access: {
     admin: authenticated,
     create: authenticated,
@@ -12,6 +16,7 @@ export const Users: CollectionConfig = {
     update: authenticated,
   },
   admin: {
+    group: '系统',
     defaultColumns: ['name', 'email'],
     useAsTitle: 'name',
   },
@@ -20,6 +25,7 @@ export const Users: CollectionConfig = {
     {
       name: 'name',
       type: 'text',
+      label: '显示名称',
     },
   ],
   timestamps: true,

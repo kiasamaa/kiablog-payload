@@ -12,6 +12,10 @@ type Props = {
   children: React.ReactNode
 }
 
+/** 工作台里所有独立卡片的基底，保证欢迎条、卡片、骨架屏视觉一致 */
+export const WORKSPACE_SURFACE =
+  'rounded-2xl border border-white/60 bg-white/85 shadow-[0_20px_50px_-32px_rgba(15,23,42,0.5)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 dark:shadow-black/40'
+
 export const WorkspaceCard: React.FC<Props> = ({
   title,
   icon: Icon,
@@ -19,12 +23,7 @@ export const WorkspaceCard: React.FC<Props> = ({
   className,
   children,
 }) => (
-  <section
-    className={cn(
-      'rounded-2xl border border-slate-900/[0.06] bg-slate-50 p-4 dark:border-white/10 dark:bg-white/[0.04]',
-      className,
-    )}
-  >
+  <section className={cn('flex flex-col p-5', WORKSPACE_SURFACE, className)}>
     <div className="mb-3 flex items-center justify-between gap-2">
       <p className="flex items-center gap-2 text-[15px] font-semibold text-slate-800 dark:text-slate-100">
         {Icon ? <Icon className="h-4 w-4 text-indigo-500 dark:text-sky-300" /> : null}
@@ -43,6 +42,6 @@ export const WorkspaceCard: React.FC<Props> = ({
       ) : null}
     </div>
 
-    {children}
+    <div className="flex-1">{children}</div>
   </section>
 )

@@ -64,4 +64,8 @@ Thumbs.db
 
 # ===== AI / IDE 本地数据 =====
 .codebuddy/
-.agents/
+
+# ===== Agent skills（随仓库同步，便于换机开发）=====
+# 只忽略 Python 字节码等运行时缓存
+**/__pycache__/
+*.pyc

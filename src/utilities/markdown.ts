@@ -66,18 +66,79 @@ marked.setOptions({
 })
 
 /**
- * 极简清洗：移除脚本、内联事件与 javascript: 伪协议。
- * 正文由后台管理员撰写，这里只做兜底，避免把脚本注入到前台页面。
+ * 允许原样输出的 HTML 标签白名单。
+ *
+ * 正文由作者本人撰写，这里只放行排版类标签；其余标签（script、style、iframe 等）
+ * 一律转义成文本，既不会执行脚本，也不会因为未闭合标签把后续 DOM 吞进脚本内容里。
  */
-const sanitizeHtml = (html: string): string =>
-  html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/javascript:/gi, '')
+const ALLOWED_HTML_TAGS = new Set([
+  'a',
+  'abbr',
+  'b',
+  'br',
+  'cite',
+  'code',
+  'del',
+  'dfn',
+  'em',
+  'figcaption',
+  'figure',
+  'hr',
+  'i',
+  'img',
+  'ins',
+  'kbd',
+  'mark',
+  'q',
+  's',
+  'small',
+  'span',
+  'strong',
+  'sub',
+  'sup',
+  'time',
+  'u',
+  'wbr',
+])
+
+const HTML_TAG_RE = /<\/?([a-zA-Z][a-zA-Z0-9-]*)(?:\s[^<>]*?)?\/?>/g
+
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+/**
+ * 按白名单处理原始 HTML：白名单标签原样保留，其余标签连同残缺的 `<` 一起转义成文本。
+ */
+const escapeUnallowedHtml = (raw: string): string => {
+  let result = ''
+  let lastIndex = 0
+
+  for (const match of raw.matchAll(HTML_TAG_RE)) {
+    const index = match.index ?? 0
+    const tagName = match[1]?.toLowerCase() ?? ''
+
+    result += raw.slice(lastIndex, index).replace(/</g, '&lt;')
+    result += ALLOWED_HTML_TAGS.has(tagName) ? match[0] : escapeHtml(match[0])
+    lastIndex = index + match[0].length
+  }
+
+  return result + raw.slice(lastIndex).replace(/</g, '&lt;')
+}
+
+marked.use({
+  renderer: {
+    html(token) {
+      return escapeUnallowedHtml(token.text)
+    },
+  },
+})
 
 export const renderMarkdown = (markdown?: string | null): string => {
   if (!markdown) return ''
 
-  return sanitizeHtml(marked.parse(markdown) as string)
+  return marked.parse(markdown) as string
 }

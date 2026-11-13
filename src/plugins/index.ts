@@ -17,6 +17,13 @@ export const plugins: Plugin[] = [
   redirectsPlugin({
     collections: ['posts'],
     overrides: {
+      labels: {
+        singular: '重定向',
+        plural: '重定向',
+      },
+      admin: {
+        group: '站点',
+      },
       hooks: {
         afterChange: [revalidateRedirects],
       },

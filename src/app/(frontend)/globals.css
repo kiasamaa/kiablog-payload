@@ -237,6 +237,8 @@
 html {
   opacity: 0;
   scroll-behavior: smooth;
+  /* 恒定预留滚动条槽位：弹层锁定滚动、长短页面切换都不会让布局横向抖动 */
+  scrollbar-gutter: stable;
 }
 
 html.dark,
@@ -277,6 +279,22 @@ pre {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.65);
+}
+
+/*
+ * 隐藏滚动条但保留滚动能力（滚轮 / 触摸 / 键盘仍可用）。
+ * 用于工作台这类覆盖层：不显示滚动条，就不会出现"自带滚动条挤压内容宽度"的 8px 抖动；
+ * 屏幕较矮时仍能滚到底部，不会把内容裁掉。
+ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* ========== 毛玻璃 ========== */

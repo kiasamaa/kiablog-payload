@@ -1,4 +1,5 @@
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
+import { zh } from '@payloadcms/translations/languages/zh'
 import path from 'path'
 import { buildConfig, PayloadRequest } from 'payload'
 import sharp from 'sharp'
@@ -21,6 +22,17 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   admin: {
+    meta: {
+      titleSuffix: ' · 站点管理',
+      description: 'KIASite 内容管理后台',
+      icons: [
+        {
+          rel: 'icon',
+          type: 'image/svg+xml',
+          url: '/favicon.svg',
+        },
+      ],
+    },
     components: {
       beforeLogin: ['@/components/BeforeLogin'],
       beforeDashboard: ['@/components/BeforeDashboard'],
@@ -32,19 +44,19 @@ export default buildConfig({
     livePreview: {
       breakpoints: [
         {
-          label: 'Mobile',
+          label: '手机',
           name: 'mobile',
           width: 375,
           height: 667,
         },
         {
-          label: 'Tablet',
+          label: '平板',
           name: 'tablet',
           width: 768,
           height: 1024,
         },
         {
-          label: 'Desktop',
+          label: '桌面',
           name: 'desktop',
           width: 1440,
           height: 900,
@@ -53,6 +65,23 @@ export default buildConfig({
     },
   },
   editor: defaultLexical,
+  i18n: {
+    supportedLanguages: { zh },
+    fallbackLanguage: 'zh',
+    // 重定向插件只自带 en/es 等语言，这里补一份中文，避免后台出现 translation key 原文
+    translations: {
+      zh: {
+        'plugin-redirects': {
+          customUrl: '自定义链接',
+          documentToRedirect: '选择要跳转的文档',
+          fromUrl: '来源路径',
+          internalLink: '站内文档',
+          redirectType: '跳转类型',
+          toUrlType: '目标类型',
+        },
+      },
+    },
+  },
   db: sqliteAdapter({
     client: {
       url: process.env.DATABASE_URL || '',

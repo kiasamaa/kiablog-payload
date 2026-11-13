@@ -10,6 +10,7 @@ import {
   Menu,
   Search,
   Tag,
+  X,
 } from 'lucide-react'
 import { motion, useMotionValueEvent, useScroll, type Transition } from 'motion/react'
 import Link from 'next/link'
@@ -49,6 +50,8 @@ export const Navbar: React.FC<{
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
+  const [hasAside, setHasAside] = useState(false)
+  const [wide, setWide] = useState(false)
   const lastY = useRef(0)
 
   useMotionValueEvent(scrollY, 'change', (y) => {
@@ -80,6 +83,27 @@ export const Navbar: React.FC<{
     setMobileOpen(false)
   }, [pathname])
 
+  // 侧边栏只在 xl 以上可见，按钮随之出现/消失
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1280px)')
+    const update = () => setWide(media.matches)
+
+    update()
+    media.addEventListener('change', update)
+
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  // 页面是否渲染了侧边栏，由 Aside 打上的标记判断，避免在导航里重复维护路由表
+  useEffect(() => {
+    const check = () => setHasAside(Boolean(document.querySelector('[data-aside-variant]')))
+
+    check()
+    const timer = window.setTimeout(check, 160)
+
+    return () => window.clearTimeout(timer)
+  }, [pathname])
+
   const contentWidth = compact ? (narrow ? '92%' : '66.66%') : '100%'
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
@@ -87,7 +111,7 @@ export const Navbar: React.FC<{
   return (
     <>
       <motion.header
-        animate={{ y: hidden ? -80 : compact ? 6 : 0 }}
+        animate={{ y: consoleOpen ? 0 : hidden ? -80 : compact ? 6 : 0 }}
         className="fixed inset-x-0 top-0 z-50 h-12"
         transition={{ duration: hidden ? 0.26 : 0.42, ease: 'easeOut' }}
       >
@@ -203,10 +227,11 @@ export const Navbar: React.FC<{
             />
 
             <NavIconButton
+              active={consoleOpen}
               className="hidden md:flex"
-              icon={Command}
-              label="工作台"
-              onClick={() => setConsoleOpen(true)}
+              icon={consoleOpen ? X : Command}
+              label={consoleOpen ? '关闭工作台' : '工作台'}
+              onClick={() => setConsoleOpen((open) => !open)}
             />
 
             <NavIconButton
@@ -231,6 +256,7 @@ export const Navbar: React.FC<{
         onClose={() => setConsoleOpen(false)}
         open={consoleOpen}
         settings={settings}
+        showAsideToggle={hasAside && wide}
       />
     </>
   )
@@ -267,10 +293,17 @@ const NavIconButton: React.FC<{
   label: string
   onClick?: () => void
   className?: string
-}> = ({ icon: Icon, label, onClick, className }) => (
+  active?: boolean
+}> = ({ icon: Icon, label, onClick, className, active }) => (
   <motion.button
     aria-label={label}
-    className={cn(ICON_BUTTON, className)}
+    aria-pressed={active}
+    className={cn(
+      ICON_BUTTON,
+      active &&
+        'bg-gradient-to-br from-indigo-500 to-sky-500 text-white shadow-md shadow-indigo-500/25 hover:bg-indigo-500/90 hover:text-white dark:text-white dark:hover:text-white',
+      className,
+    )}
     onClick={onClick}
     title={label}
     transition={{ duration: 0.15 }}

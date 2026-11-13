@@ -1,14 +1,18 @@
 import type { CollectionConfig } from 'payload'
-import { slugField } from 'payload'
 
 import { authenticated } from '../../access/authenticated'
 import { authenticatedOrPublished } from '../../access/authenticatedOrPublished'
+import { chineseSlugField } from '../../fields/chineseSlugField'
 import { generatePreviewPath } from '../../utilities/generatePreviewPath'
 import { populatePostMeta } from './hooks/populatePostMeta'
 import { revalidateDelete, revalidatePost } from './hooks/revalidatePost'
 
 export const Posts: CollectionConfig<'posts'> = {
   slug: 'posts',
+  labels: {
+    singular: '文章',
+    plural: '文章',
+  },
   access: {
     create: authenticated,
     delete: authenticated,
@@ -45,11 +49,13 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'title',
       type: 'text',
+      label: '标题',
       required: true,
     },
     {
       name: 'description',
       type: 'textarea',
+      label: '摘要',
       admin: {
         description: '文章摘要，用于列表卡片与 SEO 描述',
       },
@@ -57,6 +63,7 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'markdown',
       type: 'textarea',
+      label: '正文（Markdown）',
       required: true,
       admin: {
         rows: 30,
@@ -66,13 +73,15 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'coverUrl',
       type: 'text',
+      label: '外链封面',
       admin: {
-        description: '外链封面地址，填写后优先于上传封面显示',
+        description: '填写图片地址后优先于上传封面显示',
       },
     },
     {
       name: 'cover',
       type: 'upload',
+      label: '上传封面',
       relationTo: 'media',
       admin: {
         description: '本地上传的封面，仅在未填写外链封面时使用',
@@ -81,19 +90,26 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'category',
       type: 'relationship',
+      label: '分类',
       relationTo: 'categories',
     },
     {
       name: 'series',
       type: 'text',
+      label: '所属系列',
       admin: {
-        description: '所属系列，用于后续的系列文章聚合',
+        description: '同系列文章会在侧边栏聚合展示',
         position: 'sidebar',
       },
     },
     {
       name: 'tags',
       type: 'array',
+      label: '标签',
+      labels: {
+        singular: '标签',
+        plural: '标签',
+      },
       admin: {
         initCollapsed: true,
       },
@@ -101,6 +117,7 @@ export const Posts: CollectionConfig<'posts'> = {
         {
           name: 'tag',
           type: 'text',
+          label: '标签名',
           required: true,
         },
       ],
@@ -108,6 +125,7 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'isPinned',
       type: 'checkbox',
+      label: '置顶',
       defaultValue: false,
       admin: {
         position: 'sidebar',
@@ -116,6 +134,7 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'views',
       type: 'number',
+      label: '浏览量',
       defaultValue: 0,
       admin: {
         position: 'sidebar',
@@ -125,6 +144,7 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'wordCount',
       type: 'number',
+      label: '字数',
       admin: {
         position: 'sidebar',
         readOnly: true,
@@ -133,8 +153,9 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'readingTime',
       type: 'number',
+      label: '阅读时长（分钟）',
       admin: {
-        description: '预计阅读时长（分钟），随正文自动计算',
+        description: '随正文自动计算，无需手动填写',
         position: 'sidebar',
         readOnly: true,
       },
@@ -142,6 +163,7 @@ export const Posts: CollectionConfig<'posts'> = {
     {
       name: 'publishedAt',
       type: 'date',
+      label: '发布时间',
       admin: {
         position: 'sidebar',
         date: {
@@ -149,7 +171,7 @@ export const Posts: CollectionConfig<'posts'> = {
         },
       },
     },
-    slugField(),
+    chineseSlugField(),
   ],
   hooks: {
     afterChange: [revalidatePost],
