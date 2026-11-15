@@ -5,10 +5,11 @@ import React from 'react'
 
 import { getMediaUrl } from '@/utilities/getMediaUrl'
 
-import { PhotoWallClient, type AlbumData } from './PhotoWallClient'
+import { PhotoWallClient } from './PhotoWallClient'
+import type { AlbumData } from './types'
 
 export const metadata: Metadata = {
-  title: '照片墙',
+  title: '相册',
 }
 
 export const revalidate = 600
@@ -49,29 +50,41 @@ export default async function PhotoWallPage() {
   photosResult?.docs.forEach((photo) => {
     const albumID = typeof photo.album === 'object' ? photo.album.id : photo.album
     const image = typeof photo.image === 'object' ? photo.image : null
-    const src = image ? getMediaUrl(image.sizes?.medium?.url || image.url) : ''
 
-    if (!albumID || !src) return
+    if (!albumID || !image) return
+
+    const detailSize = image.sizes?.xlarge || image.sizes?.large || image.sizes?.medium
+    const thumbSize = image.sizes?.medium || image.sizes?.small
+    const src = getMediaUrl(detailSize?.url || image.url)
+    const thumbSrc = getMediaUrl(thumbSize?.url || image.url)
+
+    if (!src || !thumbSrc) return
 
     const list = photosByAlbum.get(albumID) ?? []
 
     list.push({
       caption: photo.caption,
+      height: image.height || detailSize?.height || 0,
       id: photo.id,
       orientation: photo.orientation,
       src,
+      thumbSrc,
+      width: image.width || detailSize?.width || 0,
     })
     photosByAlbum.set(albumID, list)
   })
 
   const albums: AlbumData[] = albumsResult.docs.map((album) => {
     const cover = album.cover && typeof album.cover === 'object' ? album.cover : null
+    const photos = photosByAlbum.get(album.id) ?? []
 
     return {
-      coverUrl: cover ? getMediaUrl(cover.sizes?.medium?.url || cover.url) : null,
+      coverUrl: cover
+        ? getMediaUrl(cover.sizes?.medium?.url || cover.url)
+        : (photos[0]?.thumbSrc ?? null),
       description: album.description,
       id: album.id,
-      photos: photosByAlbum.get(album.id) ?? [],
+      photos,
       title: album.title,
     }
   })

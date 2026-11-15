@@ -62,8 +62,8 @@
   --font-mono: var(--font-geist-mono);
   --font-sans: var(--font-geist-sans);
   /* 站内不再使用宋体：font-serif 统一落到黑体，避免逐处改类名 */
-  --font-serif: var(--font-geist-sans), system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei',
-    sans-serif;
+  --font-serif:
+    var(--font-geist-sans), system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 @layer utilities {
@@ -366,6 +366,237 @@ pre {
     background: rgba(30, 41, 59, 0.42);
     border-color: rgba(255, 255, 255, 0.1);
   }
+}
+
+/* ========== 文章卡片 ========== */
+
+/*
+ * 文章网格有两档：默认舒展（2 列），紧凑（3 列）。
+ * 档位写在 <html data-post-layout> 上，由首屏脚本恢复，避免刷新时列数跳动。
+ */
+.post-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .post-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-post-layout='compact'] .post-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+.post-card__frame {
+  border-radius: 24px;
+  box-shadow:
+    0 24px 50px -32px rgba(15, 23, 42, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  transition: box-shadow 0.35s ease;
+}
+
+.dark .post-card__frame {
+  box-shadow:
+    0 24px 50px -32px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.post-card:hover .post-card__frame {
+  box-shadow:
+    0 32px 60px -32px rgba(15, 23, 42, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.dark .post-card:hover .post-card__frame {
+  box-shadow:
+    0 32px 60px -32px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.post-card__media {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.post-card__image {
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.post-card:hover .post-card__image {
+  transform: scale(1.045);
+}
+
+.post-card__fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15) 0 1px, transparent 1.4px) 0 0 /
+      28px 28px,
+    radial-gradient(120% 120% at 18% 8%, rgba(56, 189, 248, 0.55), transparent 52%),
+    radial-gradient(95% 95% at 88% 90%, rgba(34, 211, 238, 0.32), transparent 58%),
+    linear-gradient(155deg, #0b1729 0%, #102a46 55%, #0d1f36 100%);
+}
+
+.post-card__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(2, 6, 23, 0.94) 0%,
+    rgba(2, 6, 23, 0.55) 28%,
+    rgba(2, 6, 23, 0.12) 58%,
+    transparent 78%
+  );
+}
+
+.post-card__content {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 20px 22px 22px;
+}
+
+.post-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.post-card__excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: rgba(248, 250, 252, 0.72);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.post-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(248, 250, 252, 0.58);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-card__meta svg {
+  width: 12px;
+  height: 12px;
+}
+
+.post-card__chip {
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 767px) {
+  .post-card__content {
+    padding: 16px 18px 18px;
+  }
+
+  .post-card__title {
+    font-size: 18px;
+  }
+
+  .post-card__excerpt {
+    font-size: 13px;
+  }
+
+  .post-card__meta {
+    margin-top: 10px;
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 1024px) {
+  html[data-post-layout='compact'] .post-card__content {
+    padding: 16px 18px 18px;
+  }
+
+  html[data-post-layout='compact'] .post-card__title {
+    font-size: 18px;
+  }
+
+  html[data-post-layout='compact'] .post-card__excerpt {
+    margin-top: 4px;
+    font-size: 13px;
+    -webkit-line-clamp: 1;
+  }
+
+  html[data-post-layout='compact'] .post-card__meta {
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  html[data-post-layout='compact'] .post-card__chip {
+    font-size: 9.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-card__frame,
+  .post-card__image {
+    transition: none;
+  }
+
+  .post-card:hover .post-card__image {
+    transform: none;
+  }
+}
+
+/* ========== 工作台 ========== */
+
+/*
+ * 工作台使用固定的设计高度（900px），而不是把视口高度均分给卡片。
+ * 高屏时上下留白并垂直居中；视口不足 900px 时由外层 overlay 滚动。
+ */
+@media (min-width: 1024px) {
+  .workspace-panel {
+    height: 900px;
+    min-height: 900px;
+    max-height: 900px;
+    margin-block: max(0px, calc((100dvh - 900px) / 2));
+  }
+}
+
+/* ========== 站点背景 ========== */
+.site-bg__image {
+  opacity: var(--site-bg-opacity, 0.65);
+  filter: blur(var(--site-bg-blur, 20px));
+  transform: scale(1.08);
+  transition: opacity 0.3s ease;
+}
+
+html[data-bg-visible='0'] .site-bg__image {
+  opacity: 0;
+}
+
+.site-bg__glow {
+  transition: opacity 0.3s ease;
+}
+
+html[data-bg-glow='0'] .site-bg__glow {
+  opacity: 0;
 }
 
 /* ========== Markdown 正文 ========== */

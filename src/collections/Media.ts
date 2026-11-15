@@ -12,6 +12,7 @@ import { anyone } from '../access/anyone'
 import { authenticated } from '../access/authenticated'
 import { importImageFromUrlEndpoint } from '../endpoints/media/importFromUrl'
 import { downloadSourceUrlOnCreate } from './Media/hooks/downloadSourceUrl'
+import { fillAltFromFilename } from './Media/hooks/fillAltFromFilename'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -43,31 +44,39 @@ export const Media: CollectionConfig = {
   admin: {
     group: '内容',
     defaultColumns: ['filename', 'sourceUrl', 'author', 'updatedAt'],
+    components: {
+      edit: {
+        // 新建保存后回列表，而不是停在文档编辑页
+        SaveButton: '@/components/admin/MediaSaveButton',
+      },
+    },
   },
   hooks: {
     beforeOperation: [downloadSourceUrlOnCreate],
+    beforeChange: [fillAltFromFilename],
   },
   endpoints: [importImageFromUrlEndpoint],
   fields: [
+    {
+      name: 'sourceUrl',
+      type: 'text',
+      label: '图片链接',
+      validate: isHttpUrl,
+      admin: {
+        description: '没有本地图片时填写图床原图地址，保存时会自动下载到媒体库',
+        components: {
+          Field: '@/components/admin/MediaSourceField',
+        },
+      },
+    },
     {
       name: 'alt',
       type: 'text',
       label: '替代文本',
       admin: {
-        description: '图片无法显示时展示的文字，也用于无障碍阅读',
-      },
-    },
-    {
-      name: 'sourceUrl',
-      type: 'text',
-      label: '外链地址',
-      validate: isHttpUrl,
-      admin: {
         description:
-          '没有本地图片时，填图床原图地址（如七牛 img.kianexus.com），保存时会自动下载到媒体库',
-        components: {
-          Field: '@/components/admin/MediaSourceField',
-        },
+          '图片无法显示时展示的文字，也用于无障碍阅读；留空时默认使用文件名（不含扩展名）',
+        placeholder: '例如：海边的日落',
       },
     },
     {
@@ -104,6 +113,8 @@ export const Media: CollectionConfig = {
     staticDir: path.resolve(dirname, '../../public/media'),
     // 允许"只填外链"创建：文件由 downloadSourceUrlOnCreate 在写库前补齐
     filesRequiredOnCreate: false,
+    // 原生「粘贴网址」与下方自定义外链字段重复，关掉避免两个入口
+    pasteURL: false,
     adminThumbnail: 'thumbnail',
     focalPoint: true,
     imageSizes: [

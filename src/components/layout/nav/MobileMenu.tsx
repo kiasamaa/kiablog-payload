@@ -16,7 +16,7 @@ type Props = {
 const basicItems = [
   { href: '/', label: '首页', icon: Home },
   { href: '/posts', label: '全部文章', icon: BookOpen },
-  { href: '/photowall', label: '壁纸墙', icon: Camera },
+  { href: '/photowall', label: '相册', icon: Camera },
   { href: '/about', label: '关于', icon: Info },
 ]
 

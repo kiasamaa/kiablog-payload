@@ -10,7 +10,7 @@ import { SiteBackground } from '@/components/layout/SiteBackground'
 import { ReadingProvider } from '@/components/providers/ReadingProvider'
 import { ThemeProvider } from '@/components/providers/ThemeProvider'
 import { getCachedGlobal } from '@/utilities/getGlobals'
-import { getMediaUrl } from '@/utilities/getMediaUrl'
+import { getBackgroundImageUrls } from '@/utilities/backgroundPreferences'
 import { getNavData } from '@/utilities/getNavData'
 import { getServerSideURL } from '@/utilities/getURL'
 import { mergeOpenGraph } from '@/utilities/mergeOpenGraph'
@@ -20,7 +20,7 @@ import './globals.css'
 import 'highlight.js/styles/vs2015.css'
 import 'katex/dist/katex.min.css'
 
-const themeScript = `(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.add(t==='light'?'light':'dark');}catch(e){document.documentElement.classList.add('dark');}})();`
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.add(t==='light'?'light':'dark');var c=localStorage.getItem('nb-post-compact')==='1';document.documentElement.dataset.postLayout=c?'compact':'comfortable';var b=Number(localStorage.getItem('nb-bg-blur'));if(!isFinite(b)||b<0)b=20;var o=Number(localStorage.getItem('nb-bg-opacity'));if(!isFinite(o)||o<0)o=65;document.documentElement.style.setProperty('--site-bg-blur',b+'px');document.documentElement.style.setProperty('--site-bg-opacity',String(o/100));document.documentElement.dataset.bgGlow=localStorage.getItem('nb-bg-glow')==='0'?'0':'1';document.documentElement.dataset.bgVisible=localStorage.getItem('nb-bg-visible')==='0'?'0':'1';}catch(e){document.documentElement.classList.add('dark');document.documentElement.dataset.postLayout='comfortable';}})();`
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const settings = await getCachedGlobal('site-settings', 1)()
@@ -49,9 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [settings, nav] = await Promise.all([getCachedGlobal('site-settings', 1)(), getNavData()])
 
   const siteTitle = settings?.siteTitle || 'Kira Blog'
-  const backgroundImage = settings?.backgroundImages?.[0]?.image
-  const backgroundUrl =
-    backgroundImage && typeof backgroundImage === 'object' ? getMediaUrl(backgroundImage.url) : undefined
+  const backgroundUrls = getBackgroundImageUrls(settings?.backgroundImages)
 
   return (
     <html
@@ -67,7 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <ThemeProvider>
           <ReadingProvider>
-            <SiteBackground imageUrl={backgroundUrl} />
+            <SiteBackground images={backgroundUrls} />
             <Navbar
               categories={nav.categories}
               settings={settings}

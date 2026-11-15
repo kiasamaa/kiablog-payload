@@ -35,7 +35,7 @@ export const PostGrid: React.FC<Props> = ({ posts, emptyText = '这里还没有�
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="post-grid">
         {visiblePosts.map((post, index) => (
           <PostCard index={index} key={post.id} post={post} />
         ))}

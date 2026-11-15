@@ -205,13 +205,13 @@ export interface Post {
 export interface Media {
   id: number;
   /**
-   * 图片无法显示时展示的文字，也用于无障碍阅读
-   */
-  alt?: string | null;
-  /**
-   * 没有本地图片时，填图床原图地址（如七牛 img.kianexus.com），保存时会自动下载到媒体库
+   * 没有本地图片时填写图床原图地址，保存时会自动下载到媒体库
    */
   sourceUrl?: string | null;
+  /**
+   * 图片无法显示时展示的文字，也用于无障碍阅读；留空时默认使用文件名（不含扩展名）
+   */
+  alt?: string | null;
   /**
    * 选填，壁纸/插图的作者署名
    */
@@ -617,8 +617,8 @@ export interface PhotosSelect<T extends boolean = true> {
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
   sourceUrl?: T;
+  alt?: T;
   author?: T;
   source?: T;
   caption?: T;

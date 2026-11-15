@@ -24,13 +24,19 @@ export const downloadSourceUrlOnCreate: CollectionBeforeOperationHook = async ({
     throw new APIError('请上传图片文件，或填写要下载到本地的外链地址', 400)
   }
 
-  const target = parseUrl(sourceUrl)
-  const { buffer, mime, name } = await fetchRemoteImage(target)
+  try {
+    const target = parseUrl(sourceUrl)
+    const { buffer, mime, name } = await fetchRemoteImage(target)
 
-  req.file = {
-    data: buffer,
-    mimetype: mime,
-    name,
-    size: buffer.byteLength,
+    req.file = {
+      data: buffer,
+      mimetype: mime,
+      name,
+      size: buffer.byteLength,
+    }
+  } catch (error) {
+    // parseUrl / fetchRemoteImage 抛的是普通 Error，直接冒泡会被 Payload 当成 500，
+    // 后台只剩一句「Something went wrong」。转成 400 才能把具体原因提示给编辑者。
+    throw new APIError(error instanceof Error ? error.message : '外链图片下载失败', 400)
   }
 }

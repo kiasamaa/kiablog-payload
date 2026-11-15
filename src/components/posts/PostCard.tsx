@@ -1,19 +1,25 @@
 'use client'
 
-import { motion } from 'motion/react'
 import { Clock, Eye, Pin } from 'lucide-react'
+import {
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 export type PostCardData = {
   id: number
   title: string
   slug: string
-  description?: string | null
-  coverUrl?: string | null
-  categoryTitle?: string | null
-  categorySlug?: string | null
+  description?: null | string
+  coverUrl?: null | string
+  categoryTitle?: null | string
+  categorySlug?: null | string
   tags?: string[]
   isPinned?: boolean | null
   views?: number | null
@@ -26,72 +32,122 @@ type Props = {
   index: number
 }
 
+/**
+ * 文章卡：整张封面 + 底部信息层。
+ *
+ * 两档排版由 <html data-post-layout> 的 CSS 接管：
+ * 舒展模式 2 列（标题 20px / 摘要 2 行），紧凑模式 3 列（标题 18px / 摘要 1 行）。
+ * 组件本身不接收 compact prop，避免 SSR 与 localStorage 偏好不一致导致的跳动。
+ */
 export const PostCard: React.FC<Props> = ({ post, index }) => {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 })
-  const [glare, setGlare] = useState({ x: 50, y: 50, opacity: 0 })
+  const reducedMotion = useReducedMotion() ?? false
+  const [canTilt, setCanTilt] = useState(false)
 
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return
+  const rotateX = useSpring(0, { damping: 26, mass: 0.6, stiffness: 220 })
+  const rotateY = useSpring(0, { damping: 26, mass: 0.6, stiffness: 220 })
+  const glareX = useMotionValue(50)
+  const glareY = useMotionValue(50)
+  const glareOpacity = useSpring(0, { damping: 24, stiffness: 180 })
+  const glare = useMotionTemplate`radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255, 255, 255, 0.12), transparent 55%)`
 
-    const rect = cardRef.current.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
+  useEffect(() => {
+    if (reducedMotion) {
+      setCanTilt(false)
+      return
+    }
 
-    setTilt({
-      rotateX: ((y - centerY) / centerY) * -5,
-      rotateY: ((x - centerX) / centerX) * 5,
-    })
-    setGlare({ x: (x / rect.width) * 100, y: (y / rect.height) * 100, opacity: 0.16 })
+    const media = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const update = () => setCanTilt(media.matches)
+
+    update()
+    media.addEventListener('change', update)
+
+    return () => media.removeEventListener('change', update)
+  }, [reducedMotion])
+
+  const resetTilt = () => {
+    rotateX.set(0)
+    rotateY.set(0)
+    glareOpacity.set(0)
   }
 
-  const handleMouseLeave = () => {
-    setTilt({ rotateX: 0, rotateY: 0 })
-    setGlare({ x: 50, y: 50, opacity: 0 })
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!canTilt || !cardRef.current) return
+
+    const rect = cardRef.current.getBoundingClientRect()
+    const px = (event.clientX - rect.left) / rect.width
+    const py = (event.clientY - rect.top) / rect.height
+
+    // 最大 ±3° / ±2°，只改 MotionValue，不触发 React 重渲染
+    rotateY.set((px - 0.5) * 6)
+    rotateX.set((0.5 - py) * 4)
+    glareX.set(px * 100)
+    glareY.set(py * 100)
+    glareOpacity.set(1)
   }
 
   return (
     <motion.div
       animate={{ opacity: 1, y: 0 }}
-      initial={{ opacity: 0, y: 30 }}
-      transition={{ delay: Math.min(index, 6) * 0.06, duration: 0.45, ease: 'easeOut' }}
+      initial={reducedMotion ? false : { opacity: 0, y: 24 }}
+      transition={{
+        delay: reducedMotion ? 0 : Math.min(index, 8) * 0.045,
+        duration: 0.55,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      whileHover={
+        reducedMotion
+          ? undefined
+          : { y: -4, transition: { damping: 26, stiffness: 260, type: 'spring' } }
+      }
     >
-      <Link className="group block" href={`/posts/${post.slug}`}>
+      <Link
+        className="post-card group block rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+        href={`/posts/${post.slug}`}
+        onFocus={resetTilt}
+      >
         <div
-          className="relative overflow-hidden rounded-3xl shadow-lg shadow-slate-900/5 transition-shadow duration-300 group-hover:shadow-2xl group-hover:shadow-indigo-500/15"
-          onMouseLeave={handleMouseLeave}
+          className="post-card__frame relative"
+          onMouseLeave={resetTilt}
           onMouseMove={handleMouseMove}
           ref={cardRef}
-          style={{ perspective: '1000px' }}
         >
-          <div
-            className="relative transition-transform duration-200 ease-out"
+          <motion.div
+            className="relative"
             style={{
-              transform: `rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`,
+              rotateX,
+              rotateY,
+              transformPerspective: 1000,
               transformStyle: 'preserve-3d',
             }}
           >
-            <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-800">
+            <div className="post-card__media relative bg-slate-900">
               {post.coverUrl ? (
                 <Image
                   alt={post.title}
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="post-card__image object-cover"
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  priority={index < 2}
+                  sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 440px"
                   src={post.coverUrl}
                 />
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/60 via-sky-500/40 to-cyan-400/60" />
+                <div aria-hidden className="post-card__fallback" />
               )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div aria-hidden className="post-card__shade" />
 
-              <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-3xl"
+                style={{ background: glare, opacity: glareOpacity }}
+              />
+
+              <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-4 md:p-5">
                 {post.isPinned ? (
-                  <span className="flex items-center gap-1 rounded-full bg-amber-500/90 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
-                    <Pin className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/95 px-2.5 py-1 text-[10px] font-semibold text-slate-950 shadow-sm">
+                    <Pin aria-hidden="true" className="h-3 w-3" />
                     置顶
                   </span>
                 ) : (
@@ -99,47 +155,33 @@ export const PostCard: React.FC<Props> = ({ post, index }) => {
                 )}
 
                 {post.categoryTitle ? (
-                  <span className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+                  <span className="post-card__chip rounded-full border border-white/25 bg-slate-950/40 px-2.5 py-1 font-medium text-white/90 backdrop-blur-md">
                     {post.categoryTitle}
                   </span>
                 ) : null}
               </div>
 
-              <div className="absolute inset-x-0 bottom-0 p-4 md:p-5">
-                <h3 className="mb-1.5 line-clamp-2 text-base leading-snug font-bold text-white md:text-lg">
-                  {post.title}
-                </h3>
+              <div className="post-card__content">
+                <h3 className="post-card__title">{post.title}</h3>
 
-                {post.description ? (
-                  <p className="mb-3 line-clamp-2 text-[13px] leading-relaxed text-white/70 md:text-sm">
-                    {post.description}
-                  </p>
-                ) : null}
+                {post.description ? <p className="post-card__excerpt">{post.description}</p> : null}
 
-                <div className="flex items-center justify-between text-[12px] text-white/65">
-                  <div className="flex items-center gap-3">
-                    {post.publishedAtLabel ? <span>{post.publishedAtLabel}</span> : null}
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {post.readingTime || 1} 分钟
-                    </span>
-                  </div>
+                <div className="post-card__meta">
+                  {post.publishedAtLabel ? <span>{post.publishedAtLabel}</span> : null}
 
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
+                  <span className="inline-flex items-center gap-1">
+                    <Clock aria-hidden="true" />
+                    {post.readingTime || 1} 分钟
+                  </span>
+
+                  <span className="ml-auto inline-flex items-center gap-1">
+                    <Eye aria-hidden="true" />
                     {post.views ?? 0}
                   </span>
                 </div>
               </div>
             </div>
-
-            <div
-              className="pointer-events-none absolute inset-0 rounded-3xl transition-opacity duration-200"
-              style={{
-                background: `radial-gradient(circle at ${glare.x}% ${glare.y}%, rgba(255,255,255,${glare.opacity}), transparent 60%)`,
-              }}
-            />
-          </div>
+          </motion.div>
         </div>
       </Link>
     </motion.div>

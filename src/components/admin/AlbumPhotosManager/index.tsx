@@ -1,11 +1,13 @@
 'use client'
 
-import { useDocumentInfo, useField } from '@payloadcms/ui'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useDocumentDrawer, useDocumentInfo, useField, useListDrawer } from '@payloadcms/ui'
+import { ImagePlus, Images } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import './index.scss'
 
 type MediaRef = {
+  alt?: null | string
   filename?: null | string
   height?: null | number
   id: number
@@ -19,9 +21,8 @@ type PhotoDoc = {
   id: number
   image?: MediaRef | number | null
   orientation?: null | string
+  sort?: null | number
 }
-
-type PreviewState = 'failed' | 'idle' | 'loading' | 'ready'
 
 const thumbOf = (photo: PhotoDoc): null | string => {
   if (!photo.image || typeof photo.image === 'number') return null
@@ -30,6 +31,11 @@ const thumbOf = (photo: PhotoDoc): null | string => {
 
 const mediaOf = (photo: PhotoDoc): MediaRef | null =>
   photo.image && typeof photo.image === 'object' ? photo.image : null
+
+const captionOf = (photo: PhotoDoc): string => {
+  const media = mediaOf(photo)
+  return photo.caption || media?.alt || media?.filename || '未命名'
+}
 
 const orientationOf = (media: MediaRef): string | undefined => {
   if (!media.width || !media.height) return undefined
@@ -50,14 +56,17 @@ const messageFrom = (json: unknown, fallback: string): string => {
 /**
  * 相册详情页里的照片管理区。
  *
- * 相册与照片原本是两个独立集合，需要来回切换页面才能关联；
- * 这里把「看照片 / 加照片 / 设封面 / 移除照片」收进相册这一页。
+ * 照片统一存在媒体库，这里只负责「从媒体库挑选」：
+ * 新建一张媒体，或从已有图片里多选，选中后生成本相册的照片记录。
+ * 这样相册页不再重复上传 / 外链下载，媒体库保持唯一入口。
  */
 export const AlbumPhotosManager: React.FC = () => {
   const { id } = useDocumentInfo()
   const albumId = typeof id === 'number' || typeof id === 'string' ? id : null
 
-  const { setValue: setCoverValue } = useField<number | string | null>({ path: 'cover' })
+  const { setValue: setCoverValue, value: coverValue } = useField<number | string | null>({
+    path: 'cover',
+  })
 
   const [photos, setPhotos] = useState<PhotoDoc[]>([])
   const [loading, setLoading] = useState(false)
@@ -65,12 +74,19 @@ export const AlbumPhotosManager: React.FC = () => {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  const [showUrlPanel, setShowUrlPanel] = useState(false)
-  const [urlValue, setUrlValue] = useState('')
-  const [previewSrc, setPreviewSrc] = useState('')
-  const [previewState, setPreviewState] = useState<PreviewState>('idle')
+  const [NewMediaDrawer, , { closeDrawer: closeNewMediaDrawer, openDrawer: openNewMediaDrawer }] =
+    useDocumentDrawer({
+      collectionSlug: 'media',
+    })
 
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [
+    MediaListDrawer,
+    ,
+    { closeDrawer: closeMediaListDrawer, openDrawer: openMediaListDrawer },
+  ] = useListDrawer({
+    collectionSlugs: ['media'],
+    selectedCollection: 'media',
+  })
 
   const load = useCallback(async () => {
     if (!albumId) return
@@ -100,13 +116,12 @@ export const AlbumPhotosManager: React.FC = () => {
   }, [load])
 
   const createPhoto = useCallback(
-    async (media: MediaRef, caption?: string, sort?: number) => {
+    async (media: MediaRef, sort: number) => {
       if (!albumId) return
 
       const response = await fetch('/api/photos', {
         body: JSON.stringify({
           album: albumId,
-          caption: caption || undefined,
           image: media.id,
           orientation: orientationOf(media),
           sort,
@@ -118,100 +133,94 @@ export const AlbumPhotosManager: React.FC = () => {
 
       if (!response.ok) {
         throw new Error(
-          messageFrom(await response.json().catch(() => null), `添加照片失败（HTTP ${response.status}）`),
+          messageFrom(
+            await response.json().catch(() => null),
+            `添加照片失败（HTTP ${response.status}）`,
+          ),
         )
       }
     },
     [albumId],
   )
 
-  const handleFiles = async (files: File[]) => {
-    if (!files.length) return
+  const addMedia = useCallback(
+    async (mediaDocs: MediaRef[]) => {
+      if (!albumId || !mediaDocs.length) return
 
-    setError('')
-    setNotice('')
+      setError('')
+      setNotice('')
 
-    try {
-      for (let index = 0; index < files.length; index += 1) {
-        const file = files[index]
-        setBusy(`正在上传 ${index + 1}/${files.length}`)
+      const existingIDs = new Set(
+        photos
+          .map((photo) => mediaOf(photo)?.id)
+          .filter((id): id is number => typeof id === 'number')
+          .map(String),
+      )
+      const fresh = mediaDocs.filter((media) => !existingIDs.has(String(media.id)))
+      const skipped = mediaDocs.length - fresh.length
 
-        const form = new FormData()
-        form.append('file', file)
-        form.append('alt', file.name.replace(/\.[^.]+$/, ''))
+      if (!fresh.length) {
+        setNotice('所选图片已经在相册里了')
+        return
+      }
 
-        const response = await fetch('/api/media', {
-          body: form,
+      try {
+        const startSort = photos.reduce((max, photo) => Math.max(max, photo.sort ?? 0), 0) + 1
+
+        for (let index = 0; index < fresh.length; index += 1) {
+          setBusy(`正在添加 ${index + 1}/${fresh.length}`)
+          await createPhoto(fresh[index], startSort + index)
+        }
+
+        await load()
+        setNotice(
+          `已添加 ${fresh.length} 张照片${skipped ? `，跳过 ${skipped} 张已在相册中的` : ''}`,
+        )
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '添加照片失败')
+      } finally {
+        setBusy('')
+      }
+    },
+    [albumId, createPhoto, load, photos],
+  )
+
+  const addMediaByIDs = useCallback(
+    async (ids: (number | string)[]) => {
+      if (!ids.length) return
+
+      try {
+        const query = new URLSearchParams({ depth: '0', limit: String(ids.length) })
+        ids.forEach((id, index) => query.append(`where[id][in][${index}]`, String(id)))
+
+        const response = await fetch(`/api/media?${query.toString()}`, {
           credentials: 'include',
-          method: 'POST',
         })
 
         if (!response.ok) {
-          throw new Error(
-            messageFrom(await response.json().catch(() => null), `上传失败（HTTP ${response.status}）`),
-          )
+          throw new Error(`读取媒体库失败（HTTP ${response.status}）`)
         }
 
-        const json = (await response.json()) as { doc: MediaRef }
-        await createPhoto(json.doc, file.name.replace(/\.[^.]+$/, ''), photos.length + index)
+        const json = (await response.json()) as { docs?: MediaRef[] }
+        const byID = new Map((json.docs ?? []).map((media) => [String(media.id), media]))
+        const selected = ids
+          .map((id) => byID.get(String(id)))
+          .filter((media): media is MediaRef => Boolean(media))
+
+        await addMedia(selected)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '读取媒体库失败')
       }
-
-      await load()
-      setNotice(`已添加 ${files.length} 张照片`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '上传失败')
-    } finally {
-      setBusy('')
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }
-
-  const addFromUrl = async () => {
-    const url = urlValue.trim()
-    if (!url) {
-      setError('请先填写图片链接')
-      return
-    }
-
-    setError('')
-    setNotice('')
-
-    try {
-      setBusy('正在下载外链图片')
-
-      const response = await fetch('/api/media/import-from-url', {
-        body: JSON.stringify({ url }),
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        method: 'POST',
-      })
-
-      if (!response.ok) {
-        throw new Error(
-          messageFrom(await response.json().catch(() => null), `下载失败（HTTP ${response.status}）`),
-        )
-      }
-
-      const json = (await response.json()) as { doc: MediaRef }
-      await createPhoto(json.doc, undefined, photos.length)
-
-      setUrlValue('')
-      setPreviewSrc('')
-      setPreviewState('idle')
-      setShowUrlPanel(false)
-      await load()
-      setNotice('已从外链添加')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '添加失败')
-    } finally {
-      setBusy('')
-    }
-  }
+    },
+    [addMedia],
+  )
 
   const removePhoto = async (photo: PhotoDoc) => {
     if (!window.confirm('从相册中移除这张照片？媒体库里的原图不会被删除。')) return
 
     setBusy('正在移除照片')
+    setError('')
+    setNotice('')
 
     try {
       const response = await fetch(`/api/photos/${photo.id}`, {
@@ -221,7 +230,10 @@ export const AlbumPhotosManager: React.FC = () => {
 
       if (!response.ok) {
         throw new Error(
-          messageFrom(await response.json().catch(() => null), `移除失败（HTTP ${response.status}）`),
+          messageFrom(
+            await response.json().catch(() => null),
+            `移除失败（HTTP ${response.status}）`,
+          ),
         )
       }
 
@@ -243,8 +255,16 @@ export const AlbumPhotosManager: React.FC = () => {
     // 非多态 upload 字段在表单里的值是关系的 id 本身，传对象会显示成 [object Object]
     setCoverValue(media.id)
     setError('')
-    setNotice('已选为相册封面，记得点击下方的「保存」生效')
+    setNotice('已选为相册封面，记得点击上方的「保存」生效')
   }
+
+  const normalizedCoverID =
+    coverValue && typeof coverValue === 'object'
+      ? (coverValue as unknown as { id?: number }).id
+      : coverValue
+
+  const isCover = (media: MediaRef | null): boolean =>
+    Boolean(media && normalizedCoverID != null && String(media.id) === String(normalizedCoverID))
 
   if (!albumId) {
     return (
@@ -256,152 +276,131 @@ export const AlbumPhotosManager: React.FC = () => {
   }
 
   return (
-    <section className="album-photos">
-      <header className="album-photos__head">
-        <div>
-          <h3 className="album-photos__title">
-            相册照片
-            <span className="album-photos__count">{photos.length}</span>
-          </h3>
-          <p className="album-photos__tip">
-            上传本地图片或粘贴外链，保存时会自动生成各尺寸缩略图。
-          </p>
-        </div>
+    <>
+      <section aria-busy={Boolean(busy)} className="album-photos">
+        <header className="album-photos__head">
+          <div>
+            <h3 className="album-photos__title">
+              相册照片
+              <span className="album-photos__count">{photos.length}</span>
+            </h3>
+            <p className="album-photos__tip">照片统一存放在媒体库；可以先上传，再回来多选。</p>
+          </div>
 
-        <div className="album-photos__actions">
-          <button
-            className="album-photos__btn"
-            disabled={Boolean(busy)}
-            onClick={() => fileRef.current?.click()}
-            type="button"
-          >
-            上传图片
-          </button>
-          <button
-            className="album-photos__btn album-photos__btn--primary"
-            disabled={Boolean(busy)}
-            onClick={() => setShowUrlPanel((open) => !open)}
-            type="button"
-          >
-            从外链添加
-          </button>
-        </div>
-      </header>
-
-      <input
-        accept="image/*"
-        hidden
-        multiple
-        onChange={(event) => {
-          const files = event.target.files ? Array.from(event.target.files) : []
-          void handleFiles(files)
-        }}
-        ref={fileRef}
-        type="file"
-      />
-
-      {showUrlPanel && (
-        <div className="album-photos__url">
-          <div className="album-photos__row">
-            <input
-              className="album-photos__input"
-              onChange={(event) => {
-                setUrlValue(event.target.value)
-                setPreviewState('idle')
-                setPreviewSrc('')
-              }}
-              placeholder="https://img.kianexus.com/wallpaper/xxx.webp"
-              type="url"
-              value={urlValue}
-            />
+          <div className="album-photos__actions">
             <button
               className="album-photos__btn"
-              disabled={!urlValue.trim()}
-              onClick={() => {
-                setPreviewState('loading')
-                setPreviewSrc(urlValue.trim())
-              }}
+              disabled={Boolean(busy)}
+              onClick={openNewMediaDrawer}
               type="button"
             >
-              预览
+              <ImagePlus aria-hidden="true" size={14} strokeWidth={1.8} />
+              新增图片
             </button>
             <button
               className="album-photos__btn album-photos__btn--primary"
-              disabled={Boolean(busy) || !urlValue.trim()}
-              onClick={addFromUrl}
+              disabled={Boolean(busy)}
+              onClick={openMediaListDrawer}
               type="button"
             >
-              添加
+              <Images aria-hidden="true" size={14} strokeWidth={1.8} />
+              从媒体库选择
             </button>
           </div>
+        </header>
 
-          {previewSrc && previewState !== 'idle' && (
-            <div className="album-photos__preview">
-              {previewState !== 'failed' && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt="外链预览"
-                  className={`album-photos__preview-img${previewState === 'loading' ? ' is-loading' : ''}`}
-                  onError={() => setPreviewState('failed')}
-                  onLoad={() => setPreviewState('ready')}
-                  src={previewSrc}
-                />
-              )}
-              {previewState === 'failed' && (
-                <span className="album-photos__msg album-photos__msg--error">
-                  图片无法加载，请确认链接可公开访问
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+        {error && (
+          <p className="album-photos__msg album-photos__msg--error" role="alert">
+            {error}
+          </p>
+        )}
+        {notice && (
+          <p className="album-photos__msg album-photos__msg--ok" role="status">
+            {notice}
+          </p>
+        )}
+        {busy && (
+          <p className="album-photos__msg" role="status">
+            {busy}…
+          </p>
+        )}
 
-      {error && <p className="album-photos__msg album-photos__msg--error">{error}</p>}
-      {notice && <p className="album-photos__msg album-photos__msg--ok">{notice}</p>}
-      {busy && <p className="album-photos__msg">{busy}…</p>}
+        {loading ? (
+          <p className="album-photos__tip">正在加载照片…</p>
+        ) : photos.length === 0 ? (
+          <div className="album-photos__placeholder">
+            <p className="album-photos__placeholder-title">这个相册还没有照片</p>
+            <p className="album-photos__placeholder-hint">
+              从媒体库选择已有图片，或新增一张，保存后会自动加入相册。
+            </p>
+          </div>
+        ) : (
+          <div className="album-photos__grid">
+            {photos.map((photo) => {
+              const thumb = thumbOf(photo)
+              const media = mediaOf(photo)
+              const cover = isCover(media)
 
-      {loading ? (
-        <p className="album-photos__tip">正在加载照片…</p>
-      ) : photos.length === 0 ? (
-        <div className="album-photos__placeholder">这个相册还是空的，先加几张照片吧。</div>
-      ) : (
-        <div className="album-photos__grid">
-          {photos.map((photo) => {
-            const thumb = thumbOf(photo)
+              return (
+                <figure className="album-photos__item" key={photo.id}>
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt="" className="album-photos__thumb" src={thumb} />
+                  ) : (
+                    <div className="album-photos__thumb album-photos__thumb--empty">无预览</div>
+                  )}
 
-            return (
-              <figure className="album-photos__item" key={photo.id}>
-                {thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img alt="" className="album-photos__thumb" src={thumb} />
-                ) : (
-                  <div className="album-photos__thumb album-photos__thumb--empty">无预览</div>
-                )}
+                  <figcaption className="album-photos__caption">
+                    <span className="album-photos__caption-text">{captionOf(photo)}</span>
+                    {cover && <span className="album-photos__badge">封面</span>}
+                  </figcaption>
 
-                <figcaption className="album-photos__caption">
-                  {photo.caption || '未命名'}
-                </figcaption>
+                  <div className="album-photos__tools">
+                    <button
+                      disabled={Boolean(busy) || !media || cover}
+                      onClick={() => pickCover(photo)}
+                      type="button"
+                    >
+                      {cover ? '当前封面' : '设为封面'}
+                    </button>
+                    <button
+                      className="is-danger"
+                      disabled={Boolean(busy)}
+                      onClick={() => void removePhoto(photo)}
+                      type="button"
+                    >
+                      移除
+                    </button>
+                  </div>
+                </figure>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
-                <div className="album-photos__tools">
-                  <button onClick={() => pickCover(photo)} type="button">
-                    设为封面
-                  </button>
-                  <button
-                    className="is-danger"
-                    disabled={Boolean(busy)}
-                    onClick={() => void removePhoto(photo)}
-                    type="button"
-                  >
-                    移除
-                  </button>
-                </div>
-              </figure>
-            )
-          })}
-        </div>
-      )}
-    </section>
+      <NewMediaDrawer
+        onSave={async ({ doc, operation }) => {
+          if (operation !== 'create' || !doc) return
+          await addMedia([doc as unknown as MediaRef])
+          // 媒体保存后 Edit 视图会切到文档编辑状态，这里主动关掉抽屉回到相册
+          closeNewMediaDrawer()
+        }}
+      />
+
+      <MediaListDrawer
+        allowCreate={false}
+        enableRowSelections
+        onBulkSelect={(selected) => {
+          closeMediaListDrawer()
+          void addMediaByIDs(Array.from(selected.keys()))
+        }}
+        onSelect={({ doc }) => {
+          closeMediaListDrawer()
+          void addMediaByIDs([doc.id])
+        }}
+      />
+    </>
   )
 }
 

@@ -103,7 +103,7 @@ export default async function HomePage() {
           <div className="mb-6 flex items-end justify-between">
             <div>
               <h2 className="font-serif text-xl font-bold text-slate-800 md:text-2xl dark:text-slate-50">
-                壁纸墙
+                相册
               </h2>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 收集光影里的日常

@@ -19,7 +19,7 @@ export const Photos: CollectionConfig = {
   admin: {
     // 照片统一在相册详情页里管理，不再单独出现在侧边栏
     hidden: true,
-    group: '照片墙',
+    group: '相册',
     useAsTitle: 'caption',
     defaultColumns: ['caption', 'album', 'orientation', 'sort', 'updatedAt'],
   },

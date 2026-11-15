@@ -181,7 +181,7 @@ export const Navbar: React.FC<{
                   href="/photowall"
                 >
                   <FolderTree className="h-4 w-4 opacity-70" />
-                  壁纸墙
+                  相册
                 </Link>
                 <Link
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-indigo-500/10 dark:text-slate-200 dark:hover:bg-sky-400/10"

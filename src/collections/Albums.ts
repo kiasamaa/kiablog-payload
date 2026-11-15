@@ -18,7 +18,7 @@ export const Albums: CollectionConfig = {
     update: authenticated,
   },
   admin: {
-    group: '照片墙',
+    group: '相册',
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'sort', 'updatedAt'],
   },
