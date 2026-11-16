@@ -42,14 +42,14 @@ const AlbumStack: React.FC<{ album: AlbumData }> = ({ album }) => {
   const front = photos[0]
 
   return (
-    <div className="relative mx-auto w-full pt-2 pb-14 sm:pb-16">
+    <div className="relative mx-auto w-full pt-2 pb-12">
       {backLayers.map((layer, layerIndex) => {
         const photo = photos[2 - layerIndex]
 
         return (
           <div
             className={cn(
-              'absolute left-1/2 aspect-[16/10] w-[82%] -translate-x-1/2 rounded-[18px] border p-2 shadow-[0_26px_45px_-34px_rgba(15,23,42,0.6)] transition-transform duration-500 ease-out',
+              'absolute left-1/2 aspect-[16/10] w-[86%] -translate-x-1/2 rounded-[18px] border p-2 shadow-[0_26px_45px_-34px_rgba(15,23,42,0.6)] transition-transform duration-500 ease-out',
               layer.className,
               layer.hover,
               photo
@@ -64,7 +64,7 @@ const AlbumStack: React.FC<{ album: AlbumData }> = ({ album }) => {
                   alt=""
                   className="object-cover"
                   fill
-                  sizes="(max-width: 768px) 78vw, (max-width: 1280px) 40vw, 34vw"
+                  sizes="(max-width: 640px) 80vw, 420px"
                   src={photo.thumbSrc}
                 />
               </div>
@@ -73,14 +73,14 @@ const AlbumStack: React.FC<{ album: AlbumData }> = ({ album }) => {
         )
       })}
 
-      <div className="relative z-20 mx-auto aspect-[16/10] w-[82%] -rotate-[4deg] rounded-[18px] border border-white/80 bg-white/90 p-2 shadow-[0_30px_52px_-32px_rgba(15,23,42,0.65)] transition-transform duration-500 ease-out group-hover:-translate-y-1 group-hover:-rotate-[1.5deg]">
+      <div className="relative z-20 mx-auto aspect-[16/10] w-[86%] -rotate-[4deg] rounded-[18px] border border-white/80 bg-white/90 p-2 shadow-[0_30px_52px_-32px_rgba(15,23,42,0.65)] transition-transform duration-500 ease-out group-hover:-translate-y-1 group-hover:-rotate-[1.5deg]">
         {front ? (
           <div className="relative h-full w-full overflow-hidden rounded-[11px]">
             <Image
               alt=""
               className="object-cover"
               fill
-              sizes="(max-width: 768px) 78vw, (max-width: 1280px) 40vw, 34vw"
+              sizes="(max-width: 640px) 80vw, 420px"
               src={front.thumbSrc}
             />
           </div>
@@ -94,8 +94,8 @@ const AlbumCard: React.FC<{
   album: AlbumData
   onSelect: (id: number) => void
 }> = ({ album, onSelect }) => (
-  <article className="group relative">
-    <h2 className="mb-2 text-center text-[24px] leading-tight font-semibold tracking-[-0.03em] text-slate-800 [text-shadow:0_1px_0_rgba(255,255,255,.35)] sm:text-[28px] dark:text-slate-50 dark:[text-shadow:0_1px_8px_rgba(0,0,0,.35)]">
+  <article className="group relative w-full max-w-[480px] shrink-0 md:w-[calc(50%-1rem)] lg:w-[480px]">
+    <h2 className="mb-2 text-center text-[21px] leading-tight font-semibold tracking-[-0.03em] text-slate-800 [text-shadow:0_1px_0_rgba(255,255,255,.35)] sm:text-[24px] dark:text-slate-50 dark:[text-shadow:0_1px_8px_rgba(0,0,0,.35)]">
       {album.title}
     </h2>
 
@@ -114,13 +114,13 @@ const AlbumWall: React.FC<{
   albums: AlbumData[]
   onSelect: (id: number) => void
 }> = ({ albums, onSelect }) => (
-  <div className="mx-auto w-full max-w-[1760px] px-4 pb-6 pt-5 sm:px-6 lg:px-8">
+  <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 pt-5 sm:px-6 lg:px-8">
     <h1 className="mb-4 text-center text-[38px] leading-none font-bold tracking-[-0.05em] text-slate-800 [text-shadow:0_1px_0_rgba(255,255,255,.35)] sm:text-[44px] dark:text-slate-50 dark:[text-shadow:0_1px_10px_rgba(0,0,0,.4)]">
       相册
     </h1>
 
     {albums.length > 0 ? (
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
+      <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-8">
         {albums.map((album) => (
           <AlbumCard album={album} key={album.id} onSelect={onSelect} />
         ))}

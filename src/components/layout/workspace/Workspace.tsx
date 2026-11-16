@@ -19,7 +19,6 @@ import {
   Sun,
   Tags as TagsIcon,
   Volume2,
-  X,
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion, type Transition } from 'motion/react'
 import Image from 'next/image'
@@ -139,7 +138,7 @@ const HotRow: React.FC<{ index: number; post: WorkspacePost; onClose: () => void
       {String(index + 1).padStart(2, '0')}
     </span>
 
-    <div className="relative h-[76px] w-[112px] shrink-0 overflow-hidden rounded-xl bg-slate-900 ring-1 ring-inset ring-white/15">
+    <div className="relative h-[76px] w-[112px] shrink-0 self-center overflow-hidden rounded-xl bg-slate-900 ring-1 ring-inset ring-white/15">
       {post.coverUrl ? (
         <Image
           alt=""
@@ -370,33 +369,14 @@ export const Workspace: React.FC<Props> = ({
           >
             <motion.header
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-none items-start justify-between gap-4"
+              className="mb-1.5 flex flex-none items-center gap-2"
               initial={reducedMotion ? false : { opacity: 0, y: 12 }}
               transition={{ duration: 0.3, ease: EASE }}
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
-                    <Command className="h-4 w-4 text-white/80" />
-                  </span>
-                  <h2 className="text-[24px] font-bold tracking-tight text-white">工作台</h2>
-                </div>
-                <p className="mt-1.5 ml-10 text-[13px] text-white/80">
-                  内容、标签与站点状态，一屏看完。
-                </p>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="hidden text-[12px] text-white/60 sm:inline">Esc 关闭</span>
-                <button
-                  aria-label="关闭工作台面板"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 outline-none transition-colors hover:bg-white/20 hover:text-white focus-visible:ring-2 focus-visible:ring-white/70"
-                  onClick={onClose}
-                  type="button"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10">
+                <Command className="h-4 w-4 text-white/80" />
+              </span>
+              <h2 className="text-[24px] font-bold tracking-tight text-white">工作台</h2>
             </motion.header>
 
             <motion.div
@@ -582,7 +562,7 @@ export const Workspace: React.FC<Props> = ({
 
               {/* 热门文章 */}
               <WorkspaceCard
-                bodyClassName="overflow-y-auto"
+                bodyClassName="overflow-y-auto -mr-4 pr-4"
                 className="lg:col-span-6 lg:col-start-4 lg:row-span-2 lg:row-start-1"
                 icon={Flame}
                 moreHref="/hots"
@@ -601,7 +581,7 @@ export const Workspace: React.FC<Props> = ({
 
               {/* 最新更新 */}
               <WorkspaceCard
-                bodyClassName="overflow-y-auto"
+                bodyClassName="overflow-y-auto -mr-4 pr-4"
                 className="lg:col-span-3 lg:col-start-10 lg:row-start-1"
                 icon={Clock3}
                 moreHref="/posts"
@@ -630,7 +610,7 @@ export const Workspace: React.FC<Props> = ({
 
               {/* 热门标签 */}
               <WorkspaceCard
-                bodyClassName="overflow-y-auto"
+                bodyClassName="overflow-y-auto -mr-4 pr-4"
                 className="lg:col-span-3 lg:col-start-10 lg:row-start-2"
                 icon={TagsIcon}
                 moreHref="/tags"
