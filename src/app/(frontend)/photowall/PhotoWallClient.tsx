@@ -114,7 +114,7 @@ const AlbumWall: React.FC<{
   albums: AlbumData[]
   onSelect: (id: number) => void
 }> = ({ albums, onSelect }) => (
-  <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 pt-5 sm:px-6 lg:px-8">
+  <div className="mx-auto w-full max-w-[1600px] px-4 pb-6 pt-5 sm:px-6 lg:px-8">
     <h1 className="mb-4 text-center text-[38px] leading-none font-bold tracking-[-0.05em] text-slate-800 [text-shadow:0_1px_0_rgba(255,255,255,.35)] sm:text-[44px] dark:text-slate-50 dark:[text-shadow:0_1px_10px_rgba(0,0,0,.4)]">
       相册
     </h1>
