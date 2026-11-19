@@ -63,10 +63,12 @@ export default async function PhotoWallPage() {
     const list = photosByAlbum.get(albumID) ?? []
 
     list.push({
+      author: image.author || null,
       caption: photo.caption,
       height: image.height || detailSize?.height || 0,
       id: photo.id,
       orientation: photo.orientation,
+      source: image.source || null,
       src,
       thumbSrc,
       width: image.width || detailSize?.width || 0,
