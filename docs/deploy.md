@@ -111,17 +111,17 @@ MEDIA_HOST_DIR=./media       # 挂载到 /app/public/media
 
 ---
 
-## 4. 一键部署
+## 4. 一键部署（只含 Docker）
 
 ```bash
 chmod +x deploy.sh
 ./deploy.sh --check        # 只做检查，不启动
-./deploy.sh                # Nginx 模式（默认）
-./deploy.sh --caddy        # Caddy 模式，容器接管 80/443
-./deploy.sh --no-build     # 跳过构建，仅重启
+./deploy.sh                # 构建镜像并启动 app
+./deploy.sh --no-build     # 跳过构建，仅重启容器
+./deploy.sh --skip-backup  # 跳过启动前的数据库备份
 ```
 
-脚本会依次校验并在失败时给出修复命令：
+脚本**只负责 app 容器**，反向代理按第 5、6 节单独配置。它会依次校验并在失败时给出修复命令：
 
 | 检查项 | 失败时的行为 |
 |:--|:--|
@@ -130,20 +130,18 @@ chmod +x deploy.sh
 | `.env` 是否存在 | 退出 |
 | `PAYLOAD_SECRET` 非空、不是示例值、长度 ≥32 | 示例值退出，过短警告 |
 | `NEXT_PUBLIC_SERVER_URL` 协议、结尾斜杠 | 缺失/格式错退出，非 https 警告 |
-| `data/kiasite.db` 是否存在 | 退出（构建期要用它预渲染） |
-| `media/` 是否为空、`data` 与 `media` 是否可写 | 空目录警告，不可写退出 |
-| Caddy 模式：`SITE_DOMAIN` 是否配置、80/443 是否空闲 | 缺失退出，被占用警告 |
-| Nginx 模式：3000 是否被占用 | 警告 |
+| `DATA_DIR` 下的数据库文件是否存在 | 退出（构建期要用它预渲染） |
+| `MEDIA_HOST_DIR` 是否为空、目录属主是否为容器 uid 1001 | 空目录警告，属主不符提示 chown |
+| 3000 端口是否被占用 | 警告 |
 
 检查通过后执行 `docker compose -f docker-compose.prod.yml up -d [--build]`，并打印状态与后续步骤。
 
-> **构建期会读 `data/kiasite.db`**：Next 在构建时预渲染页面，Payload 必须有可用的数据库。缺文件时 Dockerfile 会直接报错退出。
+> **构建期会读数据库**：Next 在构建时预渲染页面，Payload 必须有可用的库。缺文件时 Dockerfile 会直接报错退出。
 
 手动执行的等价命令：
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build                    # Nginx 模式
-docker compose -f docker-compose.prod.yml --profile caddy up -d --build    # Caddy 模式
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---
@@ -205,10 +203,8 @@ sudo systemctl stop nginx
 sudo systemctl disable nginx
 
 cd /srv/kiasite
-./deploy.sh --caddy
-
-# 或手动：
-# docker compose -f docker-compose.prod.yml --profile caddy up -d --build
+# Caddy 属于 compose 的 caddy profile，一键脚本不会启动它，需要显式指定
+docker compose -f docker-compose.prod.yml --profile caddy up -d --build
 
 docker compose -f docker-compose.prod.yml logs --tail=80 -f caddy
 ```
@@ -322,7 +318,7 @@ echo "20 4 * * * root /usr/local/bin/kiasite-backup" | sudo tee /etc/cron.d/kias
 
 | 文件 | 作用 |
 |:--|:--|
-| `deploy.sh` | 一键部署：环境校验 + 构建 + 启动，支持 `--caddy` / `--no-build` / `--check` |
+| `deploy.sh` | 一键部署 app：环境校验 + 构建 + 启动，支持 `--no-build` / `--check` / `--skip-backup` |
 | `Dockerfile` | 多阶段构建：装依赖 → 编译（用 `data/kiasite.db` 预渲染）→ 只带 standalone 产物 |
 | `docker-compose.prod.yml` | 编排 app（+ 可选 caddy），挂载 `data`/`media`，带健康检查 |
 | `deploy/nginx.conf` | 宿主机 Nginx 反代配置（方式 A） |

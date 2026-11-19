@@ -2,13 +2,13 @@
 #
 # 一键部署脚本（Ubuntu / Debian + Docker Compose v2）
 #
-#   ./deploy.sh              # 默认：只起 app，绑定 127.0.0.1:3000，由宿主机 Nginx 反代
-#   ./deploy.sh --caddy      # Caddy 模式：容器接管 80/443 并自动申请证书
-#   ./deploy.sh --no-build   # 跳过镜像构建，仅重启容器
-#   ./deploy.sh --check      # 只做检查，不启动
+#   ./deploy.sh               # 构建并启动 app（监听 127.0.0.1:3000）
+#   ./deploy.sh --no-build    # 跳过镜像构建，仅重启容器
+#   ./deploy.sh --check       # 只做检查，不启动
 #   ./deploy.sh --skip-backup # 跳过启动前的数据库备份
 #
-# 脚本会在启动前逐项校验环境，任何一项失败都会给出具体修复命令并退出。
+# 脚本只负责 Docker 部署。反向代理（Nginx 或 Caddy）的配置方式见 docs/deploy.md。
+# 启动前会逐项校验环境，任何一项失败都会给出具体修复命令并退出。
 
 set -euo pipefail
 
@@ -33,7 +33,6 @@ fail() {
 }
 
 # ---------- 参数 ----------
-MODE="nginx"
 DO_BUILD=1
 CHECK_ONLY=0
 SKIP_BACKUP=0
@@ -45,13 +44,17 @@ usage() {
 
 for arg in "$@"; do
   case "$arg" in
-    --caddy) MODE="caddy" ;;
-    --nginx) MODE="nginx" ;;
     --no-build) DO_BUILD=0 ;;
     --check) CHECK_ONLY=1 ;;
     --skip-backup) SKIP_BACKUP=1 ;;
     -h|--help) usage ;;
-    *) fail "未知参数：$arg（可用：--caddy / --nginx / --no-build / --check / --skip-backup）" ;;
+    --caddy|--nginx)
+      fail "$arg 已移除：本脚本只部署 app，反代配置见 docs/deploy.md" \
+'# Caddy 方式：
+docker compose -f docker-compose.prod.yml --profile caddy up -d
+# Nginx 方式：把站点反代到 127.0.0.1:3000，模板见 deploy/nginx.conf'
+      ;;
+    *) fail "未知参数：$arg（可用：--no-build / --check / --skip-backup）" ;;
   esac
 done
 
@@ -176,36 +179,16 @@ check_owner() {
 check_owner "$DATA_ABS" "$DATA_DIR"
 check_owner "$MEDIA_ABS" "$MEDIA_HOST_DIR"
 
-# ---------- 4. 模式相关 ----------
+# ---------- 4. 组装命令 ----------
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 
-if [ "$MODE" = "caddy" ]; then
-  DOMAIN=$(env_get SITE_DOMAIN)
-  [ -n "$DOMAIN" ] || fail "--caddy 需要在 .env 设置 SITE_DOMAIN" \
-'# 例：SITE_DOMAIN=blog.example.com
-# 该项必须已经在 DNS 里解析到本机，否则证书签不下来
-dig +short blog.example.com'
-  ok "SITE_DOMAIN = $DOMAIN"
-
-  if command -v ss >/dev/null 2>&1; then
-    BUSY=$(ss -tlnp 2>/dev/null | grep -E ':(80|443)[[:space:]]' || true)
-    if [ -n "$BUSY" ]; then
-      warn "80/443 已被占用，Caddy 可能启动失败："
-      printf '%s\n' "$BUSY" | sed 's/^/    /' >&2
-      warn "如有宿主机 Web 服务器：sudo systemctl stop nginx && sudo systemctl disable nginx"
-    else
-      ok "80/443 空闲"
-    fi
-  fi
-
-  COMPOSE+=(--profile caddy)
-else
-  if command -v ss >/dev/null 2>&1; then
-    if ss -tln 2>/dev/null | grep -qE ':3000[[:space:]]'; then
-      warn "3000 端口已被占用，容器可能起不来（本机是否还开着 dev server？）"
-    else
-      ok "3000 端口空闲"
-    fi
+# 只启动 app。compose 里 Caddy 属于 caddy profile，不指定时不会拉起，
+# 需要它时按 docs/deploy.md 手动启动。
+if command -v ss >/dev/null 2>&1; then
+  if ss -tln 2>/dev/null | grep -qE ':3000[[:space:]]'; then
+    warn "3000 端口已被占用，容器可能起不来（本机是否还开着 dev server？）"
+  else
+    ok "3000 端口空闲"
   fi
 fi
 
@@ -252,19 +235,9 @@ printf '\n%s== 状态 ==%s\n' "$C_BLUE" "$C_RESET"
 "${COMPOSE[@]}" ps
 
 printf '\n%s== 下一步 ==%s\n' "$C_BLUE" "$C_RESET"
-if [ "$MODE" = "caddy" ]; then
-  cat <<EOF
-  查看证书签发：${COMPOSE[*]} logs --tail=60 -f caddy
-  生效标志：日志出现 "certificate obtained successfully"
-  访问地址：https://$DOMAIN
+cat <<'EOF'
+  app 已启动，只监听 127.0.0.1:3000，还需要配置反向代理（二选一，详见 docs/deploy.md）：
+    Nginx：把站点反代到 127.0.0.1:3000，配置模板见 deploy/nginx.conf
+    Caddy：docker compose -f docker-compose.prod.yml --profile caddy up -d
 EOF
-else
-  cat <<'EOF'
-  app 只监听 127.0.0.1:3000，还需要配置宿主机反向代理：
-    sudo cp deploy/nginx.conf /etc/nginx/sites-available/kiasite.conf
-    sudo ln -sf /etc/nginx/sites-available/kiasite.conf /etc/nginx/sites-enabled/
-    sudo nginx -t && sudo systemctl reload nginx
-  详见 deploy/nginx.conf 顶部注释。
-EOF
-fi
 printf '  跟随日志：%s logs --tail=100 -f app\n\n' "${COMPOSE[*]}"
