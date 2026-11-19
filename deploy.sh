@@ -127,14 +127,21 @@ MEDIA_HOST_DIR=$(env_get MEDIA_HOST_DIR); MEDIA_HOST_DIR=${MEDIA_HOST_DIR:-media
 
 abs_path() {
   case "$1" in
-    /*) printf '%s' "$1" ;;
-    *)  printf '%s/%s' "$(pwd)" "$1" ;;
+    ''|'.') printf '%s' "$(pwd)" ;;
+    /*)     printf '%s' "$1" ;;
+    *)      printf '%s/%s' "$(pwd)" "${1#./}" ;;
   esac
 }
 
 DATA_ABS=$(abs_path "$DATA_DIR")
 MEDIA_ABS=$(abs_path "$MEDIA_HOST_DIR")
 DB_FILE="$DATA_ABS/kiasite.db"
+
+# DATA_DIR=. 会把整个仓库挂进容器的 /app/data，虽然能跑但不安全
+if [ "$DATA_ABS" = "$(pwd)" ]; then
+  warn "DATA_DIR 指向项目根，整个仓库会被挂载到容器 /app/data"
+  warn "  建议改用专用目录：mkdir -p data && mv kiasite.db data/，然后删掉 .env 里的 DATA_DIR"
+fi
 
 # DATABASE_URL 只对本地开发生效，容器内被 compose 固定为 /app/data/kiasite.db
 DB_URL=$(env_get DATABASE_URL)
@@ -222,7 +229,7 @@ else
     ok "数据库已备份 → backups/kiasite-$STAMP.db"
   else
     cp "$DB_FILE" "$BACKUP_DIR/kiasite-$STAMP.db"
-    warn "sqlite3 备份失败，已退回文件复制（运行中复制可能不一致）"
+    warn "sqlite3 备份失败，已退回文件复制（容器已停止时这样是安全的；运行中则可能拷到写了一半的库）"
   fi
   # 只保留最近 10 份，避免磁盘被占满（没有旧文件时 ls 返回非零，不能让 set -e 中断）
   { ls -1t "$BACKUP_DIR"/kiasite-*.db 2>/dev/null || true; } | tail -n +11 | while IFS= read -r old; do
@@ -236,7 +243,7 @@ if [ "$DO_BUILD" = "1" ]; then
   UP_ARGS+=(--build)
 fi
 
-printf '\n%s== 启动（模式：%s）==%s\n' "$C_BLUE" "$MODE" "$C_RESET"
+printf '\n%s== 启动 ==%s\n' "$C_BLUE" "$C_RESET"
 info "${COMPOSE[*]} ${UP_ARGS[*]}"
 "${COMPOSE[@]}" "${UP_ARGS[@]}" || fail "启动失败，查看日志：${COMPOSE[*]} logs --tail=100 app"
 
