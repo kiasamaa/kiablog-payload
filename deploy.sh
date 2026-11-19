@@ -12,6 +12,9 @@
 
 set -euo pipefail
 
+# 任何未被 || / if 接住的失败都打印行号，避免脚本"静默退出"
+trap 'rc=$?; printf "\n✗ 脚本在第 %s 行意外中断（退出码 %s）\n" "$LINENO" "$rc" >&2; exit $rc' ERR
+
 # ---------- 输出 ----------
 if [ -t 1 ]; then
   C_RESET=$'\033[0m'; C_RED=$'\033[31m'; C_GREEN=$'\033[32m'
@@ -88,9 +91,10 @@ ok "Docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '
 # 至少修改：PAYLOAD_SECRET、NEXT_PUBLIC_SERVER_URL'
 
 # 只读取 KEY=VALUE，不 source，避免执行 .env 里的任意命令
+# key 不存在时返回空串而不是非零（pipefail 下 grep 无匹配会让整个管道失败）
 env_get() {
   local key="$1"
-  grep -E "^[[:space:]]*${key}=" .env 2>/dev/null | tail -n 1 \
+  { grep -E "^[[:space:]]*${key}=" .env 2>/dev/null || true; } | tail -n 1 \
     | cut -d= -f2- | sed -e 's/^["'\'']//' -e 's/["'\'']$//' -e 's/[[:space:]]*$//'
 }
 
