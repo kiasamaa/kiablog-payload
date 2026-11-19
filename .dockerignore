@@ -1,0 +1,34 @@
+node_modules
+.next
+.git
+.gitignore
+.github
+.vscode
+.idea
+.codebuddy
+.agents
+
+# 日志与本地缓存
+*.log
+.DS_Store
+Thumbs.db
+tsconfig.tsbuildinfo
+
+# 环境变量（构建期改用 build-arg / 运行时用 env_file）
+.env
+.env.*
+!.env.example
+
+# 上传目录不打进镜像：运行时用 ./media 挂载到 /app/public/media
+public/media
+
+# SQLite 的临时文件；注意 data/kiasite.db 必须保留，构建期要用
+data/*-wal
+data/*-shm
+data/*.bak
+
+# 测试与文档产物
+test-results
+playwright-report
+coverage
+docs/images

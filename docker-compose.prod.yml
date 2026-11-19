@@ -1,0 +1,82 @@
+# 生产部署：Next standalone 镜像
+#
+# 服务器目录约定：
+#   /srv/kiasite/
+#   ├── .env                 # 见 docs/deploy.md
+#   ├── data/kiasite.db      # 从本地拷上来，构建与运行共用
+#   ├── media/               # 从 public/media 拷上来，挂到容器内 /app/public/media
+#   └── （本文件与源码）
+#
+# 方式 A（默认，宿主机已有 Nginx 或其他 Web 服务器）：
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   再把站点反向代理到 127.0.0.1:3000，见 deploy/nginx.conf
+#
+# 方式 B（Caddy 由容器接管 80/443，需先停掉宿主机 Web 服务器）：
+#   docker compose -f docker-compose.prod.yml --profile caddy up -d --build
+#   见 deploy/Caddyfile
+
+name: kiasite
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        # 必须与 .env 里的值一致：NEXT_PUBLIC_* 会在构建期被内联进客户端产物
+        NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL:?请在 .env 中设置 NEXT_PUBLIC_SERVER_URL}
+    image: kiasite:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/kiasite.db
+      MEDIA_DIR: /app/public/media
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data:/app/data
+      - ./media:/app/public/media
+    # 只绑本机回环：宿主机 Nginx 走 127.0.0.1:3000，Caddy 走容器网络 app:3000
+    ports:
+      - '127.0.0.1:3000:3000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  caddy:
+    image: caddy:2-alpine
+    # 只有显式 --profile caddy 时才启动，避免和宿主机 Nginx 抢 80/443
+    profiles: ['caddy']
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      # 只有 Caddy 模式需要；Nginx 模式留空也不影响解析
+      SITE_DOMAIN: ${SITE_DOMAIN:-}
+      # 同机其他子域（可选），对应 Caddyfile 末尾的示例块
+      EXTRA_DOMAIN: ${EXTRA_DOMAIN:-}
+    # 让容器内可用 host.docker.internal 访问宿主机上监听的其他服务
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

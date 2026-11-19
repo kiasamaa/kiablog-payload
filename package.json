@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Website template for Payload",
   "license": "MIT",
+  "packageManager": "pnpm@10.33.1",
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",

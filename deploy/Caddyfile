@@ -1,0 +1,57 @@
+# Caddy 反向代理：自动申请并续期 Let's Encrypt 证书
+#
+# 域名通过环境变量注入，不需要改本文件：
+#   .env 里设置 SITE_DOMAIN=blog.example.com
+#
+# 启动：docker compose -f docker-compose.prod.yml --profile caddy up -d
+# 生效标志：docker compose ... logs caddy 里出现 "certificate obtained successfully"
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy app:3000
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# 带 hash 的构建产物与按尺寸切好的媒体文件，长缓存
+	@immutable path /_next/static/* /api/media/file/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	# 后台与 API 不缓存（媒体文件已在上面单独放行）
+	@dynamic {
+		path /admin/* /api/*
+		not path /api/media/file/*
+	}
+	header @dynamic Cache-Control "no-store"
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# ============ 同机其他服务（可选）============
+#
+# Caddy 必须独占 80/443，所以原本由宿主机 Nginx 反代的子域要一并交给它接管。
+#
+# 两个前提：
+#   1. compose 里已为 caddy 配了 extra_hosts，容器内可用 host.docker.internal 访问宿主机
+#   2. 被反代的服务要监听 0.0.0.0:<port>，只绑 127.0.0.1 时容器连不上
+#
+# 在 .env 里加 EXTRA_DOMAIN=other.example.com，然后启用下面的块：
+#
+# {$EXTRA_DOMAIN} {
+# 	encode zstd gzip
+# 	reverse_proxy host.docker.internal:8080
+# }
+#
+# 如果那个服务暂时不能用 HTTPS（例如回调地址写死了 http），加 http:// 前缀即可，
+# 这样只监听 80、不申请证书：
+#
+# http://{$EXTRA_DOMAIN} {
+# 	reverse_proxy host.docker.internal:8080
+# }
