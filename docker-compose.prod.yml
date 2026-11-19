@@ -9,7 +9,7 @@
 #
 # 方式 A（默认，宿主机已有 Nginx 或其他 Web 服务器）：
 #   docker compose -f docker-compose.prod.yml up -d --build
-#   再把站点反向代理到 127.0.0.1:3000，见 deploy/nginx.conf
+#   再把站点反向代理到 127.0.0.1:${APP_PORT:-3000}，见 deploy/nginx.conf
 #
 # 方式 B（Caddy 由容器接管 80/443，需先停掉宿主机 Web 服务器）：
 #   docker compose -f docker-compose.prod.yml --profile caddy up -d --build
@@ -40,9 +40,10 @@ services:
       # 宿主机目录可配：.env 里设 DATA_DIR / MEDIA_HOST_DIR，默认 ./data 与 ./media
       - ${DATA_DIR:-./data}:/app/data
       - ${MEDIA_HOST_DIR:-./media}:/app/public/media
-    # 只绑本机回环：宿主机 Nginx 走 127.0.0.1:3000，Caddy 走容器网络 app:3000
+    # 只绑本机回环：宿主机 Nginx 走 127.0.0.1:${APP_PORT}，Caddy 走容器网络 app:3000
+    # 宿主机端口可用 .env 的 APP_PORT 改（容器内始终是 3000）
     ports:
-      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:${APP_PORT:-3000}:3000'
     healthcheck:
       test:
         [

@@ -2,7 +2,7 @@
 #
 # 一键部署脚本（Ubuntu / Debian + Docker Compose v2）
 #
-#   ./deploy.sh               # 构建并启动 app（监听 127.0.0.1:3000）
+#   ./deploy.sh               # 构建并启动 app（默认监听 127.0.0.1:3000）
 #   ./deploy.sh --no-build    # 跳过镜像构建，仅重启容器
 #   ./deploy.sh --check       # 只做检查，不启动
 #   ./deploy.sh --skip-backup # 跳过启动前的数据库备份
@@ -52,7 +52,7 @@ for arg in "$@"; do
       fail "$arg 已移除：本脚本只部署 app，反代配置见 docs/deploy.md" \
 '# Caddy 方式：
 docker compose -f docker-compose.prod.yml --profile caddy up -d
-# Nginx 方式：把站点反代到 127.0.0.1:3000，模板见 deploy/nginx.conf'
+# Nginx 方式：把站点反代到 127.0.0.1:3000（或 .env 里的 APP_PORT），模板见 deploy/nginx.conf'
       ;;
     *) fail "未知参数：$arg（可用：--no-build / --check / --skip-backup）" ;;
   esac
@@ -182,13 +182,18 @@ check_owner "$MEDIA_ABS" "$MEDIA_HOST_DIR"
 # ---------- 4. 组装命令 ----------
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
 
+# 宿主机监听端口（容器内始终是 3000）
+APP_PORT=$(env_get APP_PORT); APP_PORT=${APP_PORT:-3000}
+
 # 只启动 app。compose 里 Caddy 属于 caddy profile，不指定时不会拉起，
 # 需要它时按 docs/deploy.md 手动启动。
 if command -v ss >/dev/null 2>&1; then
-  if ss -tln 2>/dev/null | grep -qE ':3000[[:space:]]'; then
-    warn "3000 端口已被占用，容器可能起不来（本机是否还开着 dev server？）"
+  if ss -tln 2>/dev/null | grep -qE ":${APP_PORT}[[:space:]]"; then
+    warn "宿主机端口 $APP_PORT 已被占用，容器起不来（port is already allocated）"
+    ss -tlnp 2>/dev/null | grep -E ":${APP_PORT}[[:space:]]" | sed 's/^/    /' >&2 || true
+    warn "二选一：停掉占用该端口的服务，或在 .env 里设置 APP_PORT=<空闲端口>"
   else
-    ok "3000 端口空闲"
+    ok "端口 $APP_PORT 空闲"
   fi
 fi
 
@@ -235,9 +240,9 @@ printf '\n%s== 状态 ==%s\n' "$C_BLUE" "$C_RESET"
 "${COMPOSE[@]}" ps
 
 printf '\n%s== 下一步 ==%s\n' "$C_BLUE" "$C_RESET"
-cat <<'EOF'
-  app 已启动，只监听 127.0.0.1:3000，还需要配置反向代理（二选一，详见 docs/deploy.md）：
-    Nginx：把站点反代到 127.0.0.1:3000，配置模板见 deploy/nginx.conf
+cat <<EOF
+  app 已启动，只监听 127.0.0.1:$APP_PORT，还需要配置反向代理（二选一，详见 docs/deploy.md）：
+    Nginx：把站点反代到 127.0.0.1:$APP_PORT，配置模板见 deploy/nginx.conf
     Caddy：docker compose -f docker-compose.prod.yml --profile caddy up -d
 EOF
 printf '  跟随日志：%s logs --tail=100 -f app\n\n' "${COMPOSE[*]}"

@@ -90,21 +90,24 @@ SITE_DOMAIN=blog.example.com
 - 结尾不要带 `/`，协议要与实际访问一致，否则后台登录态会反复掉
 - 用 Caddy 或反代了其他子域时，再加 `EXTRA_DOMAIN=...`
 
-### 数据库与媒体目录的位置
+### 端口与目录
 
-容器内的路径是固定的：
+容器内的端口与路径是固定的，宿主机侧可配：
 
-```
-数据库    /app/data/kiasite.db
-媒体文件  /app/public/media
-```
-
-宿主机上对应哪个目录，由两个变量决定（都可省略，默认值如下）：
+| 项目 | 容器内 | 宿主机 | 变量（默认值） |
+|:--|:--|:--|:--|
+| app 端口 | 3000（固定） | `127.0.0.1:3000` | `APP_PORT=3000` |
+| 数据库 | `/app/data/kiasite.db` | `./data` | `DATA_DIR=./data` |
+| 媒体文件 | `/app/public/media` | `./media` | `MEDIA_HOST_DIR=./media` |
 
 ```dotenv
-DATA_DIR=./data              # 挂载到 /app/data
-MEDIA_HOST_DIR=./media       # 挂载到 /app/public/media
+# 宿主机 3000 被占用时换成空闲端口，deploy.sh 会先检测
+APP_PORT=3000
+DATA_DIR=./data
+MEDIA_HOST_DIR=./media
 ```
+
+> 改过 `APP_PORT` 后要同步反向代理：Nginx 改 `deploy/nginx.conf` 里 upstream 的端口；Caddy 不用改（走容器网络 `app:3000`）。
 
 > `.env` 里的 `DATABASE_URL` **只对本地 `pnpm dev` 有效**。容器里它被 compose 覆盖成 `file:/app/data/kiasite.db`，
 > 想换存储位置要改 `DATA_DIR`，改 `DATABASE_URL` 是无效的。
@@ -132,7 +135,7 @@ chmod +x deploy.sh
 | `NEXT_PUBLIC_SERVER_URL` 协议、结尾斜杠 | 缺失/格式错退出，非 https 警告 |
 | `DATA_DIR` 下的数据库文件是否存在 | 退出（构建期要用它预渲染） |
 | `MEDIA_HOST_DIR` 是否为空、目录属主是否为容器 uid 1001 | 空目录警告，属主不符提示 chown |
-| 3000 端口是否被占用 | 警告 |
+| `APP_PORT` 是否被占用 | 警告，并列出占用进程 |
 
 检查通过后执行 `docker compose -f docker-compose.prod.yml up -d [--build]`，并打印状态与后续步骤。
 
@@ -148,7 +151,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ## 5. 方式 A：宿主机 Nginx 反代
 
-app 只绑定 `127.0.0.1:3000`，对外由 Nginx 承接。
+app 只绑定 `127.0.0.1:${APP_PORT}`（默认 3000），对外由 Nginx 承接。`deploy/nginx.conf` 顶部 upstream 的端口要与 `.env` 的 `APP_PORT` 保持一致。
 
 ```bash
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/kiasite.conf
@@ -304,6 +307,7 @@ echo "20 4 * * * root /usr/local/bin/kiasite-backup" | sudo tee /etc/cron.d/kias
 | 容器启动即退出，日志 `EACCES` / `readonly database` | `data/`、`media/` 属主不是 1001：`sudo chown -R 1001:1001 ...` |
 | Caddy 一直 `obtaining certificate` 后失败 | 80 端口被占 / DNS 未生效 / CDN 代理拦截验证 |
 | `nginx -t` 报 `duplicate default server` | 多个 server 块都声明了 `default_server` |
+| 启动报 `port is already allocated` | 宿主机 `APP_PORT` 被占用：换端口或停掉占用进程（`ss -tlnp \| grep :3000`） |
 | 后台上传图片 413 | 用 Nginx 且没放开 `client_max_body_size` |
 | 图片 404 但 `media/` 有文件 | 容器内路径不对：确认 `MEDIA_DIR=/app/public/media` 且挂载为 `./media:/app/public/media` |
 | 登录后立刻掉登录态 | `NEXT_PUBLIC_SERVER_URL` 与实际访问的域名/协议不一致 |
