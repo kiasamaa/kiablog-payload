@@ -6,16 +6,12 @@ import {
   lexicalEditor,
 } from '@payloadcms/richtext-lexical'
 import path from 'path'
-import { fileURLToPath } from 'url'
 
 import { anyone } from '../access/anyone'
 import { authenticated } from '../access/authenticated'
 import { importImageFromUrlEndpoint } from '../endpoints/media/importFromUrl'
 import { downloadSourceUrlOnCreate } from './Media/hooks/downloadSourceUrl'
 import { fillAltFromFilename } from './Media/hooks/fillAltFromFilename'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
 
 const isHttpUrl = (value?: string | null): string | true => {
   if (!value) return true
@@ -110,7 +106,8 @@ export const Media: CollectionConfig = {
   ],
   upload: {
     // Upload to the public/media directory in Next.js making them publicly accessible even outside of Payload
-    staticDir: path.resolve(dirname, '../../public/media'),
+    // 用 cwd 而不是源码目录：Docker 里代码被编译进 .next，相对源码目录会解析到错误位置
+    staticDir: process.env.MEDIA_DIR || path.resolve(process.cwd(), 'public/media'),
     // 允许"只填外链"创建：文件由 downloadSourceUrlOnCreate 在写库前补齐
     filesRequiredOnCreate: false,
     // 原生「粘贴网址」与下方自定义外链字段重复，关掉避免两个入口

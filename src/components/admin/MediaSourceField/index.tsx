@@ -140,7 +140,7 @@ export const MediaSourceField: React.FC<Props> = ({ path, readOnly }) => {
               preview()
             }
           }}
-          placeholder="https://img.kianexus.com/wallpaper/xxx.webp"
+          placeholder="https://example.com/wallpaper/xxx.webp"
           spellCheck={false}
           type="url"
           value={current}
