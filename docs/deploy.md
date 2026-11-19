@@ -90,6 +90,25 @@ SITE_DOMAIN=blog.example.com
 - 结尾不要带 `/`，协议要与实际访问一致，否则后台登录态会反复掉
 - 用 Caddy 或反代了其他子域时，再加 `EXTRA_DOMAIN=...`
 
+### 数据库与媒体目录的位置
+
+容器内的路径是固定的：
+
+```
+数据库    /app/data/kiasite.db
+媒体文件  /app/public/media
+```
+
+宿主机上对应哪个目录，由两个变量决定（都可省略，默认值如下）：
+
+```dotenv
+DATA_DIR=./data              # 挂载到 /app/data
+MEDIA_HOST_DIR=./media       # 挂载到 /app/public/media
+```
+
+> `.env` 里的 `DATABASE_URL` **只对本地 `pnpm dev` 有效**。容器里它被 compose 覆盖成 `file:/app/data/kiasite.db`，
+> 想换存储位置要改 `DATA_DIR`，改 `DATABASE_URL` 是无效的。
+
 ---
 
 ## 4. 一键部署

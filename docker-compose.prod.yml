@@ -37,8 +37,9 @@ services:
       PAYLOAD_DB_PUSH: 'true'
       TZ: Asia/Shanghai
     volumes:
-      - ./data:/app/data
-      - ./media:/app/public/media
+      # 宿主机目录可配：.env 里设 DATA_DIR / MEDIA_HOST_DIR，默认 ./data 与 ./media
+      - ${DATA_DIR:-./data}:/app/data
+      - ${MEDIA_HOST_DIR:-./media}:/app/public/media
     # 只绑本机回环：宿主机 Nginx 走 127.0.0.1:3000，Caddy 走容器网络 app:3000
     ports:
       - '127.0.0.1:3000:3000'

@@ -6,7 +6,7 @@
 #   ./deploy.sh --caddy      # Caddy 模式：容器接管 80/443 并自动申请证书
 #   ./deploy.sh --no-build   # 跳过镜像构建，仅重启容器
 #   ./deploy.sh --check      # 只做检查，不启动
-#   ./deploy.sh --skip-backup# 跳过启动前的数据库备份
+#   ./deploy.sh --skip-backup # 跳过启动前的数据库备份
 #
 # 脚本会在启动前逐项校验环境，任何一项失败都会给出具体修复命令并退出。
 
@@ -114,28 +114,67 @@ esac
 ok "NEXT_PUBLIC_SERVER_URL = $SERVER_URL"
 
 # ---------- 3. 数据 ----------
-[ -f "data/kiasite.db" ] || fail "缺少 data/kiasite.db" \
-'# 从已有环境拷贝（构建期要用它预渲染页面）：
-scp kiasite.db user@server:'"$(pwd)"'/data/kiasite.db
+# 宿主机目录由 .env 的 DATA_DIR / MEDIA_HOST_DIR 决定，与 compose 的挂载保持一致
+DATA_DIR=$(env_get DATA_DIR); DATA_DIR=${DATA_DIR:-data}
+MEDIA_HOST_DIR=$(env_get MEDIA_HOST_DIR); MEDIA_HOST_DIR=${MEDIA_HOST_DIR:-media}
+
+abs_path() {
+  case "$1" in
+    /*) printf '%s' "$1" ;;
+    *)  printf '%s/%s' "$(pwd)" "$1" ;;
+  esac
+}
+
+DATA_ABS=$(abs_path "$DATA_DIR")
+MEDIA_ABS=$(abs_path "$MEDIA_HOST_DIR")
+DB_FILE="$DATA_ABS/kiasite.db"
+
+# DATABASE_URL 只对本地开发生效，容器内被 compose 固定为 /app/data/kiasite.db
+DB_URL=$(env_get DATABASE_URL)
+case "$DB_URL" in
+  ''|'file:./kiasite.db'|'file:./data/kiasite.db'|'file:/app/data/kiasite.db') : ;;
+  *)
+    warn "DATABASE_URL=$DB_URL 只对本地 pnpm dev 有效，容器内固定为 file:/app/data/kiasite.db"
+    warn "要改存放位置请设置 .env 的 DATA_DIR（当前：$DATA_DIR）"
+    ;;
+esac
+
+[ -f "$DB_FILE" ] || fail "缺少数据库文件：$DB_FILE" \
+"# 从已有环境拷贝（构建期要用它预渲染页面）：
+scp kiasite.db user@server:$DATA_ABS/kiasite.db
 # 或从备份恢复：
-cp /path/to/kiasite-backup.db data/kiasite.db'
+cp /path/to/kiasite-backup.db $DB_FILE
+# 如果数据库不在这里，检查 .env 的 DATA_DIR（当前：$DATA_DIR）"
 
-DB_SIZE=$(du -h "data/kiasite.db" | cut -f1)
-ok "数据库 data/kiasite.db（$DB_SIZE）"
+DB_SIZE=$(du -h "$DB_FILE" | cut -f1)
+ok "数据库 $DATA_DIR/kiasite.db（$DB_SIZE）"
 
-[ -d media ] || { mkdir -p media && warn "media/ 不存在，已创建空目录"; }
-if [ -z "$(ls -A media 2>/dev/null)" ]; then
-  warn "media/ 为空，站点上线后图片会是 404，记得把原 public/media 内容拷进来"
+if [ ! -d "$MEDIA_ABS" ]; then
+  mkdir -p "$MEDIA_ABS" || fail "无法创建媒体目录：$MEDIA_ABS" \
+"sudo mkdir -p $MEDIA_ABS && sudo chown 1001:1001 $MEDIA_ABS"
+  warn "媒体目录 $MEDIA_HOST_DIR 不存在，已创建空目录"
+fi
+if [ -z "$(ls -A "$MEDIA_ABS" 2>/dev/null)" ]; then
+  warn "$MEDIA_HOST_DIR 为空，站点上线后图片会是 404，记得把原 public/media 内容拷进来"
 else
-  ok "媒体目录 media/（$(find media -type f 2>/dev/null | wc -l | tr -d ' ') 个文件）"
+  ok "媒体目录 $MEDIA_HOST_DIR（$(find "$MEDIA_ABS" -type f 2>/dev/null | wc -l | tr -d ' ') 个文件）"
 fi
 
-if [ ! -w data ] || [ ! -w media ]; then
-  fail "data/ 或 media/ 当前用户不可写" \
-'sudo chown -R 1001:1001 data media    # 容器内以 uid 1001 运行
-sudo chmod -R 775 data media'
-fi
-ok "数据目录可写"
+# 容器内以 uid 1001 运行，属主不对会导致建表失败或上传 500
+check_owner() {
+  local dir="$1" label="$2" uid
+  uid=$(stat -c '%u' "$dir" 2>/dev/null || echo '?')
+  case "$uid" in
+    1001|0) ok "$label 属主正确（uid=$uid）" ;;
+    *)
+      warn "$label 属主是 uid=$uid，容器内以 1001 运行，可能无法写入"
+      warn "  sudo chown -R 1001:1001 $dir"
+      ;;
+  esac
+}
+
+check_owner "$DATA_ABS" "$DATA_DIR"
+check_owner "$MEDIA_ABS" "$MEDIA_HOST_DIR"
 
 # ---------- 4. 模式相关 ----------
 COMPOSE=(docker compose -f "$COMPOSE_FILE")
@@ -161,10 +200,12 @@ dig +short blog.example.com'
 
   COMPOSE+=(--profile caddy)
 else
-  if command -v ss >/dev/null 2>&1 && ss -tln 2>/dev/null | grep -qE ':3000[[:space:]]'; then
-    warn "3000 端口已被占用，容器可能起不来（本机是否还开着 dev server？）"
-  else
-    ok "3000 端口空闲"
+  if command -v ss >/dev/null 2>&1; then
+    if ss -tln 2>/dev/null | grep -qE ':3000[[:space:]]'; then
+      warn "3000 端口已被占用，容器可能起不来（本机是否还开着 dev server？）"
+    else
+      ok "3000 端口空闲"
+    fi
   fi
 fi
 
@@ -179,17 +220,22 @@ if [ "$SKIP_BACKUP" = "1" ]; then
   warn "已跳过数据库备份（--skip-backup）"
 else
   STAMP=$(date +%F-%H%M)
-  mkdir -p backups
+  BACKUP_DIR=$(abs_path "backups")
+  mkdir -p "$BACKUP_DIR"
   if docker run --rm \
-      -v "$(pwd)/data:/data" \
-      -v "$(pwd)/backups:/backup" \
+      -v "$DATA_ABS:/data" \
+      -v "$BACKUP_DIR:/backup" \
       alpine:3 \
       sh -c "apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 /data/kiasite.db \".backup '/backup/kiasite-$STAMP.db'\"" >/dev/null 2>&1; then
     ok "数据库已备份 → backups/kiasite-$STAMP.db"
   else
-    cp data/kiasite.db "backups/kiasite-$STAMP.db"
+    cp "$DB_FILE" "$BACKUP_DIR/kiasite-$STAMP.db"
     warn "sqlite3 备份失败，已退回文件复制（运行中复制可能不一致）"
   fi
+  # 只保留最近 10 份，避免磁盘被占满（没有旧文件时 ls 返回非零，不能让 set -e 中断）
+  { ls -1t "$BACKUP_DIR"/kiasite-*.db 2>/dev/null || true; } | tail -n +11 | while IFS= read -r old; do
+    rm -f "$old"
+  done
 fi
 
 # ---------- 6. 启动 ----------
