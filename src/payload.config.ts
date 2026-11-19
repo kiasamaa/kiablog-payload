@@ -86,6 +86,12 @@ export default buildConfig({
     client: {
       url: process.env.DATABASE_URL || '',
     },
+    // 生产默认不自动同步表结构。单实例 + SQLite 的部署可以用 PAYLOAD_DB_PUSH=true
+    // 打开，这样改完集合字段重启容器即可生效；不设置则沿用默认（仅开发环境 push）。
+    push:
+      process.env.PAYLOAD_DB_PUSH === undefined
+        ? undefined
+        : process.env.PAYLOAD_DB_PUSH === 'true',
   }),
   collections: [Posts, Categories, Albums, Photos, Media, Users],
   cors: [getServerSideURL()].filter(Boolean),

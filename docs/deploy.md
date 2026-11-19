@@ -239,7 +239,19 @@ git pull
 docker image prune -f
 ```
 
-**改了集合字段**（schema 变化）时：先在本地确认 `pnpm dev` 正常，再备份并上传新的 `kiasite.db`，然后重新部署。
+**改了集合字段**（schema 变化）：同样 `git pull` + `./deploy.sh` 即可。
+
+`docker-compose.prod.yml` 里设了 `PAYLOAD_DB_PUSH=true`，容器启动时 Payload 会把表结构同步到线上库；`deploy.sh` 在启动前会自动把数据库备份到 `backups/`。
+
+这个机制的边界要清楚：
+
+| 变更类型 | 是否安全 |
+|:--|:--|
+| 新增字段、新增集合、加索引 | 安全，只做增量 |
+| 删除字段、修改字段类型 | 底层可能重建表，历史数据有丢失风险 |
+| 同时启动多个实例 | 不要，SQLite 写锁会让同步失败 |
+
+涉及第二类改动时，先确认 `backups/` 里有可用备份再执行。
 
 ---
 
@@ -282,6 +294,8 @@ echo "20 4 * * * root /usr/local/bin/kiasite-backup" | sudo tee /etc/cron.d/kias
 | 登录后立刻掉登录态 | `NEXT_PUBLIC_SERVER_URL` 与实际访问的域名/协议不一致 |
 | 改了 `.env` 不生效 | `NEXT_PUBLIC_*` 是构建期内联的，必须 `--build` 重建 |
 | `deploy.sh: /usr/bin/env: 'bash\r'` | 脚本被转成了 CRLF，仓库已用 `.gitattributes` 锁定 LF；本地可用 `git checkout -- deploy.sh` 重新拉取 |
+| 启动日志报 `table ... already exists` 或列不匹配 | 数据库结构与代码 schema 冲突：确认 `PAYLOAD_DB_PUSH=true` 生效，且没有多个实例同时连接同一个库 |
+| 改了字段重启后仍报列不存在 | 容器没重建（只 restart 了）：用 `./deploy.sh` 而不是 `docker compose restart` |
 
 ---
 

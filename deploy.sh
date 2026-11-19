@@ -6,6 +6,7 @@
 #   ./deploy.sh --caddy      # Caddy 模式：容器接管 80/443 并自动申请证书
 #   ./deploy.sh --no-build   # 跳过镜像构建，仅重启容器
 #   ./deploy.sh --check      # 只做检查，不启动
+#   ./deploy.sh --skip-backup# 跳过启动前的数据库备份
 #
 # 脚本会在启动前逐项校验环境，任何一项失败都会给出具体修复命令并退出。
 
@@ -35,9 +36,10 @@ fail() {
 MODE="nginx"
 DO_BUILD=1
 CHECK_ONLY=0
+SKIP_BACKUP=0
 
 usage() {
-  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
   exit 0
 }
 
@@ -47,8 +49,9 @@ for arg in "$@"; do
     --nginx) MODE="nginx" ;;
     --no-build) DO_BUILD=0 ;;
     --check) CHECK_ONLY=1 ;;
+    --skip-backup) SKIP_BACKUP=1 ;;
     -h|--help) usage ;;
-    *) fail "未知参数：$arg（可用：--caddy / --nginx / --no-build / --check）" ;;
+    *) fail "未知参数：$arg（可用：--caddy / --nginx / --no-build / --check / --skip-backup）" ;;
   esac
 done
 
@@ -165,12 +168,31 @@ else
   fi
 fi
 
-# ---------- 5. 启动 ----------
 if [ "$CHECK_ONLY" = "1" ]; then
   printf '\n%s检查通过，未执行启动（--check）%s\n\n' "$C_GREEN" "$C_RESET"
   exit 0
 fi
 
+# ---------- 5. 启动前备份 ----------
+# 生产开着 PAYLOAD_DB_PUSH，改字段时表结构会被自动调整，先留一份可回滚的库
+if [ "$SKIP_BACKUP" = "1" ]; then
+  warn "已跳过数据库备份（--skip-backup）"
+else
+  STAMP=$(date +%F-%H%M)
+  mkdir -p backups
+  if docker run --rm \
+      -v "$(pwd)/data:/data" \
+      -v "$(pwd)/backups:/backup" \
+      alpine:3 \
+      sh -c "apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 /data/kiasite.db \".backup '/backup/kiasite-$STAMP.db'\"" >/dev/null 2>&1; then
+    ok "数据库已备份 → backups/kiasite-$STAMP.db"
+  else
+    cp data/kiasite.db "backups/kiasite-$STAMP.db"
+    warn "sqlite3 备份失败，已退回文件复制（运行中复制可能不一致）"
+  fi
+fi
+
+# ---------- 6. 启动 ----------
 UP_ARGS=(up -d)
 if [ "$DO_BUILD" = "1" ]; then
   UP_ARGS+=(--build)

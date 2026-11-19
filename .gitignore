@@ -23,6 +23,8 @@ next-env.d.ts
 *.db-shm
 *.sqlite
 *.sqlite3
+# 部署时自动生成的数据库备份
+backups/
 
 # ===== 上传媒体（由后台生成，不入版本库）=====
 public/media/*

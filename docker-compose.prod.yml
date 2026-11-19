@@ -32,6 +32,9 @@ services:
       NODE_ENV: production
       DATABASE_URL: file:/app/data/kiasite.db
       MEDIA_DIR: /app/public/media
+      # 生产默认不自动同步表结构；单实例 SQLite 部署打开它，
+      # 改完集合字段重启容器即可生效（破坏性变更前请先备份）
+      PAYLOAD_DB_PUSH: 'true'
       TZ: Asia/Shanghai
     volumes:
       - ./data:/app/data
