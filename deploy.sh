@@ -220,16 +220,40 @@ if [ "$SKIP_BACKUP" = "1" ]; then
 else
   STAMP=$(date +%F-%H%M)
   BACKUP_DIR=$(abs_path "backups")
+  TARGET="$BACKUP_DIR/kiasite-$STAMP.db"
   mkdir -p "$BACKUP_DIR"
-  if docker run --rm \
+
+  # 优先用热备（运行中也能保证一致），依次尝试 sqlite3 → python3 → 容器 → 直接复制
+  BACKED=0
+  if command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 "$DB_FILE" ".backup '$TARGET'" >/dev/null 2>&1 && BACKED=1
+  fi
+  if [ "$BACKED" = "0" ] && command -v python3 >/dev/null 2>&1; then
+    if python3 - "$DB_FILE" "$TARGET" >/dev/null 2>&1 <<'PY'
+import sqlite3
+import sys
+
+src, dst = sys.argv[1], sys.argv[2]
+with sqlite3.connect(src) as source, sqlite3.connect(dst) as target:
+    source.backup(target)
+PY
+    then
+      BACKED=1
+    fi
+  fi
+  if [ "$BACKED" = "0" ] && docker run --rm \
       -v "$DATA_ABS:/data" \
       -v "$BACKUP_DIR:/backup" \
       alpine:3 \
       sh -c "apk add --no-cache sqlite >/dev/null 2>&1 && sqlite3 /data/kiasite.db \".backup '/backup/kiasite-$STAMP.db'\"" >/dev/null 2>&1; then
-    ok "数据库已备份 → backups/kiasite-$STAMP.db"
+    BACKED=1
+  fi
+  if [ "$BACKED" = "1" ]; then
+    ok "数据库已热备 → backups/kiasite-$STAMP.db"
   else
-    cp "$DB_FILE" "$BACKUP_DIR/kiasite-$STAMP.db"
-    warn "sqlite3 备份失败，已退回文件复制（容器已停止时这样是安全的；运行中则可能拷到写了一半的库）"
+    cp "$DB_FILE" "$TARGET"
+    warn "热备不可用（缺 sqlite3/python3，容器也拉不到），已用文件复制"
+    warn "  容器停止时复制是安全的；运行中则可能拷到写了一半的库"
   fi
   # 只保留最近 10 份，避免磁盘被占满（没有旧文件时 ls 返回非零，不能让 set -e 中断）
   { ls -1t "$BACKUP_DIR"/kiasite-*.db 2>/dev/null || true; } | tail -n +11 | while IFS= read -r old; do
