@@ -4,6 +4,7 @@ import { MetaTitleComponent as MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { default as default_92828a7a279ac5d6bb1b403086bca7c1 } from '@/components/admin/MarkdownImport'
 import { default as default_18ce224d01563c006cd181d7f78ddb0a } from '@/components/admin/AlbumTitleCell'
 import { default as default_c737d01ac295fb9b474fec41ab9495c7 } from '@/components/admin/AlbumPhotosManager'
 import { default as default_03b2275865f6ac74e85f0786c42cf88e } from '@/components/admin/MediaSourceField'
@@ -33,6 +34,7 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#MetaImageComponent": MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "@/components/admin/MarkdownImport#default": default_92828a7a279ac5d6bb1b403086bca7c1,
   "@/components/admin/AlbumTitleCell#default": default_18ce224d01563c006cd181d7f78ddb0a,
   "@/components/admin/AlbumPhotosManager#default": default_c737d01ac295fb9b474fec41ab9495c7,
   "@/components/admin/MediaSourceField#default": default_03b2275865f6ac74e85f0786c42cf88e,

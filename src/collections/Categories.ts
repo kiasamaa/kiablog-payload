@@ -43,7 +43,7 @@ export const Categories: CollectionConfig = {
       },
       defaultValue: 0,
     },
-    chineseSlugField({
+    chineseSlugField('categories', {
       position: undefined,
     }),
   ],

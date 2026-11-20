@@ -30,6 +30,12 @@ export const Posts: CollectionConfig<'posts'> = {
     group: '内容',
     useAsTitle: 'title',
     defaultColumns: ['title', 'category', 'publishedAt', 'updatedAt'],
+    components: {
+      edit: {
+        // 新建与编辑页顶部都能看到 Markdown 导入器
+        beforeDocumentControls: ['@/components/admin/MarkdownImport'],
+      },
+    },
     livePreview: {
       url: ({ data, req }) =>
         generatePreviewPath({
@@ -171,7 +177,7 @@ export const Posts: CollectionConfig<'posts'> = {
         },
       },
     },
-    chineseSlugField(),
+    chineseSlugField('posts'),
   ],
   hooks: {
     afterChange: [revalidatePost],

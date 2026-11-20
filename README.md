@@ -153,8 +153,6 @@ pnpm seed
 | `pnpm build` | 生产构建（含 sitemap 生成） |
 | `pnpm start` | 以生产模式启动 |
 | `pnpm seed` | 填充演示数据 |
-| `pnpm import:hexo` | 从同级 `hexo/source/_posts` 导入文章（可用 `HEXO_POSTS_DIR` 指定目录） |
-| `pnpm import:profile` | 写入站点信息、头像与关于页内容 |
 | `pnpm generate:types` | 修改集合字段后重新生成类型 |
 | `pnpm generate:importmap` | 修改后台自定义组件后重新生成 importMap |
 | `pnpm test:int` | 运行 Vitest 集成测试 |

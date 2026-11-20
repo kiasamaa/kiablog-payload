@@ -61,7 +61,7 @@ export const Albums: CollectionConfig = {
       },
       defaultValue: 0,
     },
-    chineseSlugField({
+    chineseSlugField('albums', {
       position: undefined,
     }),
     {
