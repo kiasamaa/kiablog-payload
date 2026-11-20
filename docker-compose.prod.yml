@@ -24,6 +24,9 @@ services:
       args:
         # 必须与 .env 里的值一致：NEXT_PUBLIC_* 会在构建期被内联进客户端产物
         NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL:?请在 .env 中设置 NEXT_PUBLIC_SERVER_URL}
+        # 外链封面/正文插图所在的图床域名（逗号分隔），构建期写入 remotePatterns
+        # 改这个值必须重新构建，只 restart 不生效
+        IMAGE_HOSTS: ${IMAGE_HOSTS:-}
     image: kiasite:latest
     restart: unless-stopped
     env_file:

@@ -29,7 +29,9 @@ ENV DATABASE_URL=file:/tmp/build.db \
     PAYLOAD_SECRET=build-time-placeholder \
     NODE_ENV=production
 ARG NEXT_PUBLIC_SERVER_URL=http://localhost:3000
-ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
+ARG IMAGE_HOSTS=""
+ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL \
+    IMAGE_HOSTS=$IMAGE_HOSTS
 RUN pnpm build
 
 # ---------- 运行 ----------

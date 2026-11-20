@@ -120,6 +120,14 @@ case "$SERVER_URL" in
 esac
 ok "NEXT_PUBLIC_SERVER_URL = $SERVER_URL"
 
+IMAGE_HOSTS_VALUE=$(env_get IMAGE_HOSTS)
+if [ -z "$IMAGE_HOSTS_VALUE" ]; then
+  warn ".env 未设置 IMAGE_HOSTS，文章里的外链封面会被 Next/Image 拒绝（400）"
+  warn "  如果文章用了外部图床，请在 .env 补一行：IMAGE_HOSTS=img.example.com"
+else
+  ok "IMAGE_HOSTS = $IMAGE_HOSTS_VALUE"
+fi
+
 # ---------- 3. 数据 ----------
 # 宿主机目录由 .env 的 DATA_DIR / MEDIA_HOST_DIR 决定，与 compose 的挂载保持一致
 DATA_DIR=$(env_get DATA_DIR); DATA_DIR=${DATA_DIR:-data}

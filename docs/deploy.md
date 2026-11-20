@@ -112,6 +112,20 @@ MEDIA_HOST_DIR=./media
 > `.env` 里的 `DATABASE_URL` **只对本地 `pnpm dev` 有效**。容器里它被 compose 覆盖成 `file:/app/data/kiasite.db`，
 > 想换存储位置要改 `DATA_DIR`，改 `DATABASE_URL` 是无效的。
 
+### 外链封面 / 正文插图（IMAGE_HOSTS）
+
+文章若引用了外部图床的图片，Next/Image 只允许白名单域名优化；不在白名单里会报
+`GET /_next/image?url=... 400 (Bad Request)`，前台表现为封面裂图。
+
+在 `.env` 里列出这些域名（逗号分隔，不带协议和路径）：
+
+```dotenv
+IMAGE_HOSTS=img.example.com,cdn.example.net
+```
+
+这个值在**构建期**写入 `next.config.ts` 的 `remotePatterns`，因此改完必须重建镜像（带 `--build`），
+只 `restart` 不生效。`deploy.sh` 会在检查阶段提醒你是否漏填。
+
 ---
 
 ## 4. 一键部署（只含 Docker）
